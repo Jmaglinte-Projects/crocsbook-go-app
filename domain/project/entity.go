@@ -1,10 +1,10 @@
-package poject
+package project
 
 import "time"
 
 type Project struct {
-	ProjectID      string
-	ProjectUserID  string
+	ProjectID      ProjectID
+	ProjectUserID  UserID
 	Name           string
 	Description    *string
 	Thumbnail      *string
@@ -15,3 +15,14 @@ type Project struct {
 	CreatedTime    time.Time
 	UpdatedTime    *time.Time
 }
+
+type ProjectID string
+
+type UserID string
+
+type ListCond struct {
+	ProjectID  *ProjectID
+	ProjectIDs []ProjectID
+}
+
+type CountCond ListCond

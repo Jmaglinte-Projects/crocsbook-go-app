@@ -3,13 +3,17 @@ package post
 import "time"
 
 type Post struct {
-	PostID        string
-	PostProjectID string
+	PostID        PostID
+	PostProjectID ProjectID
 	Content       *string
 	Visibility    *Visibility
 	CreatedTime   time.Time
 	UpdatedTime   *time.Time
 }
+
+type PostID string
+
+type ProjectID string
 
 type Visibility string
 

@@ -3,11 +3,15 @@ package reaction
 import "time"
 
 type Reaction struct {
-	ReactionID    string
-	PostProjectID string
+	ReactionID    ReactionID
+	PostProjectID ProjectID
 	Type          *Type
 	CreatedTime   time.Time
 }
+
+type ReactionID string
+
+type ProjectID string
 
 type Type string
 

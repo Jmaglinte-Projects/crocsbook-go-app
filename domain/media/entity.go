@@ -3,12 +3,16 @@ package media
 import "time"
 
 type Media struct {
-	MediaID        string `sql:"primary_key"`
-	MediaProjectID string `sql:"primary_key"`
+	MediaID        MediaID
+	MediaProjectID ProjectID
 	URL            *string
 	Type           *Type
 	CreatedTime    time.Time
 }
+
+type MediaID string
+
+type ProjectID string
 
 type Type string
 
