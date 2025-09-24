@@ -17,15 +17,15 @@ type usersTable struct {
 	mysql.Table
 
 	// Columns
-	UserID     mysql.ColumnString
-	Email      mysql.ColumnString
-	Gender     mysql.ColumnString
-	ProfileURL mysql.ColumnString
-	Nickname   mysql.ColumnString
-	Username   mysql.ColumnString
-	Password   mysql.ColumnString
-	CreatedAt  mysql.ColumnTimestamp
-	UpdatedAt  mysql.ColumnTimestamp
+	UserID      mysql.ColumnString
+	Email       mysql.ColumnString
+	Gender      mysql.ColumnString
+	ProfileURL  mysql.ColumnString
+	Nickname    mysql.ColumnString
+	Username    mysql.ColumnString
+	Password    mysql.ColumnString
+	CreatedTime mysql.ColumnTimestamp
+	UpdatedTime mysql.ColumnTimestamp
 
 	AllColumns     mysql.ColumnList
 	MutableColumns mysql.ColumnList
@@ -67,33 +67,33 @@ func newUsersTable(schemaName, tableName, alias string) *UsersTable {
 
 func newUsersTableImpl(schemaName, tableName, alias string) usersTable {
 	var (
-		UserIDColumn     = mysql.StringColumn("user_id")
-		EmailColumn      = mysql.StringColumn("email")
-		GenderColumn     = mysql.StringColumn("gender")
-		ProfileURLColumn = mysql.StringColumn("profile_url")
-		NicknameColumn   = mysql.StringColumn("nickname")
-		UsernameColumn   = mysql.StringColumn("username")
-		PasswordColumn   = mysql.StringColumn("password")
-		CreatedAtColumn  = mysql.TimestampColumn("created_at")
-		UpdatedAtColumn  = mysql.TimestampColumn("updated_at")
-		allColumns       = mysql.ColumnList{UserIDColumn, EmailColumn, GenderColumn, ProfileURLColumn, NicknameColumn, UsernameColumn, PasswordColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns   = mysql.ColumnList{EmailColumn, GenderColumn, ProfileURLColumn, NicknameColumn, UsernameColumn, PasswordColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns   = mysql.ColumnList{EmailColumn, GenderColumn, CreatedAtColumn}
+		UserIDColumn      = mysql.StringColumn("user_id")
+		EmailColumn       = mysql.StringColumn("email")
+		GenderColumn      = mysql.StringColumn("gender")
+		ProfileURLColumn  = mysql.StringColumn("profile_url")
+		NicknameColumn    = mysql.StringColumn("nickname")
+		UsernameColumn    = mysql.StringColumn("username")
+		PasswordColumn    = mysql.StringColumn("password")
+		CreatedTimeColumn = mysql.TimestampColumn("created_time")
+		UpdatedTimeColumn = mysql.TimestampColumn("updated_time")
+		allColumns        = mysql.ColumnList{UserIDColumn, EmailColumn, GenderColumn, ProfileURLColumn, NicknameColumn, UsernameColumn, PasswordColumn, CreatedTimeColumn, UpdatedTimeColumn}
+		mutableColumns    = mysql.ColumnList{EmailColumn, GenderColumn, ProfileURLColumn, NicknameColumn, UsernameColumn, PasswordColumn, CreatedTimeColumn, UpdatedTimeColumn}
+		defaultColumns    = mysql.ColumnList{EmailColumn, GenderColumn, CreatedTimeColumn}
 	)
 
 	return usersTable{
 		Table: mysql.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		UserID:     UserIDColumn,
-		Email:      EmailColumn,
-		Gender:     GenderColumn,
-		ProfileURL: ProfileURLColumn,
-		Nickname:   NicknameColumn,
-		Username:   UsernameColumn,
-		Password:   PasswordColumn,
-		CreatedAt:  CreatedAtColumn,
-		UpdatedAt:  UpdatedAtColumn,
+		UserID:      UserIDColumn,
+		Email:       EmailColumn,
+		Gender:      GenderColumn,
+		ProfileURL:  ProfileURLColumn,
+		Nickname:    NicknameColumn,
+		Username:    UsernameColumn,
+		Password:    PasswordColumn,
+		CreatedTime: CreatedTimeColumn,
+		UpdatedTime: UpdatedTimeColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

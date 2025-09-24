@@ -14,7 +14,7 @@ type ProjectRepository interface {
 }
 
 type ProjectService interface {
-	List(ctx context.Context, cond project.ListCond, option ListOption) ([]*Project, error)
+	List(ctx context.Context, cond project.ListCond, option ListOption) ([]*ViewProject, error)
 	Count(ctx context.Context, cond project.CountCond, option CountOption) (*uint64, error)
 }
 
@@ -27,8 +27,8 @@ type ListOption struct {
 type ListOptionSortKey int
 
 const (
-	ListOptionSortKey_ASC ListOptionSortKey = iota
-	ListOptionSortKey_DESC
+	ListOptionSortKey_CreatedAt_ASC ListOptionSortKey = iota
+	ListOptionSortKey_CreatedAt_DESC
 )
 
 type CountOption ListOption
@@ -40,12 +40,12 @@ type Service interface {
 type ShowProjectIn struct{}
 
 type ShowProjectOut struct {
-	Item Project
+	Item ViewProject
 }
 
-type Project struct {
-	ProjectID      string
-	ProjectUserID  string
+type ViewProject struct {
+	ProjectID      project.ProjectID
+	ProjectUserID  project.UserID
 	Name           string
 	Description    *string
 	Thumbnail      *string

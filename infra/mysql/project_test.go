@@ -8,10 +8,11 @@ import (
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/mysql"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/projectsvc"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReservationRepository_Find(t *testing.T) {
+func TestProjectRepository_Find(t *testing.T) {
 	db := mysql.SetupTestDB(t)
 
 	logger := slog.With("Testing", "room_repository")
@@ -22,7 +23,7 @@ func TestReservationRepository_Find(t *testing.T) {
 	id := project.ProjectID("c2a4fea6-7112-11f0-9198-8abfd21201dc")
 
 	entity, err := repo.Find(ctx, id)
-	logger.Info("TestReservationRepository_Find", "entity", entity)
+	logger.Info("TestProjectRepository_Find", "entity", entity)
 	assert.NoError(t, err)
 	assert.NotNil(t, entity)
 	assert.Equal(t, id, entity.ProjectID)
@@ -54,5 +55,51 @@ func TestProjectRepository_Store(t *testing.T) {
 	}
 
 	err := repo.Store(ctx, entity)
+	assert.NoError(t, err)
+}
+
+// SERVICE
+func TestProjectService_List(t *testing.T) {
+	db := mysql.SetupTestDB(t)
+
+	service := mysql.NewProjectService(db)
+
+	ctx := context.Background()
+
+	// roomID := reservation.ProjectID("5d641e94-7119-11f0-8845-8abfd21201dc")
+	offset := int64(0)
+
+	cond := project.ListCond{
+		// ProjectID: &roomID,
+	}
+
+	opt := projectsvc.ListOption{
+		SortKey: projectsvc.ListOptionSortKey_CreatedAt_ASC,
+		Offset:  &offset,
+		Size:    10,
+	}
+
+	entities, err := service.List(ctx, cond, opt)
+	assert.NoError(t, err)
+	assert.NotNil(t, entities)
+
+	err = mysql.PrettyPrint(entities)
+	assert.NoError(t, err)
+}
+
+func TestProjectService_Count(t *testing.T) {
+	db := mysql.SetupTestDB(t)
+
+	service := mysql.NewProjectService(db)
+
+	ctx := context.Background()
+
+	cond := project.CountCond{}
+	opt := projectsvc.CountOption{}
+
+	count, err := service.Count(ctx, cond, opt)
+	assert.NoError(t, err)
+
+	err = mysql.PrettyPrint(count)
 	assert.NoError(t, err)
 }
