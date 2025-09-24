@@ -54,6 +54,17 @@ func TestUserRepository_Store(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func Test_UserRepository_Remove(t *testing.T) {
+	db := mysql.SetupTestDB(t)
+
+	repo := mysql.NewUserRepository(db)
+
+	ctx := context.Background()
+
+	err := repo.Remove(ctx, user.UserID("c2a4fea6-7112-11f0-9198-8abfd21201dc"))
+	assert.NoError(t, err)
+}
+
 // SERVICE
 func TestUserService_List(t *testing.T) {
 	db := mysql.SetupTestDB(t)

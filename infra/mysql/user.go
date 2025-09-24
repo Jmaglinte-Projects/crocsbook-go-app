@@ -92,10 +92,10 @@ func (r *UserRepository) Store(ctx context.Context, entity *user.User) error {
 	return nil
 }
 
-func (r *UserRepository) Remove(ctx context.Context, ids ...string) error {
+func (r *UserRepository) Remove(ctx context.Context, ids ...user.UserID) error {
 	idExpressions := make([]jet.Expression, 0, len(ids))
 	for _, id := range ids {
-		idExpressions = append(idExpressions, jet.String(id))
+		idExpressions = append(idExpressions, jet.String(string(id)))
 	}
 
 	stmt := table.Users.DELETE().WHERE(table.Users.UserID.IN(idExpressions...))

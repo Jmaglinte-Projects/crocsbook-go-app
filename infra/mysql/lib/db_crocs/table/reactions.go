@@ -17,10 +17,10 @@ type reactionsTable struct {
 	mysql.Table
 
 	// Columns
-	ReactionID    mysql.ColumnString
-	PostProjectID mysql.ColumnString
-	Type          mysql.ColumnString
-	CreatedTime   mysql.ColumnTimestamp
+	ReactionID        mysql.ColumnString
+	ReactionProjectID mysql.ColumnString
+	Type              mysql.ColumnString
+	CreatedTime       mysql.ColumnTimestamp
 
 	AllColumns     mysql.ColumnList
 	MutableColumns mysql.ColumnList
@@ -62,23 +62,23 @@ func newReactionsTable(schemaName, tableName, alias string) *ReactionsTable {
 
 func newReactionsTableImpl(schemaName, tableName, alias string) reactionsTable {
 	var (
-		ReactionIDColumn    = mysql.StringColumn("reaction_id")
-		PostProjectIDColumn = mysql.StringColumn("post_project_id")
-		TypeColumn          = mysql.StringColumn("type")
-		CreatedTimeColumn   = mysql.TimestampColumn("created_time")
-		allColumns          = mysql.ColumnList{ReactionIDColumn, PostProjectIDColumn, TypeColumn, CreatedTimeColumn}
-		mutableColumns      = mysql.ColumnList{TypeColumn, CreatedTimeColumn}
-		defaultColumns      = mysql.ColumnList{CreatedTimeColumn}
+		ReactionIDColumn        = mysql.StringColumn("reaction_id")
+		ReactionProjectIDColumn = mysql.StringColumn("reaction_project_id")
+		TypeColumn              = mysql.StringColumn("type")
+		CreatedTimeColumn       = mysql.TimestampColumn("created_time")
+		allColumns              = mysql.ColumnList{ReactionIDColumn, ReactionProjectIDColumn, TypeColumn, CreatedTimeColumn}
+		mutableColumns          = mysql.ColumnList{TypeColumn, CreatedTimeColumn}
+		defaultColumns          = mysql.ColumnList{CreatedTimeColumn}
 	)
 
 	return reactionsTable{
 		Table: mysql.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ReactionID:    ReactionIDColumn,
-		PostProjectID: PostProjectIDColumn,
-		Type:          TypeColumn,
-		CreatedTime:   CreatedTimeColumn,
+		ReactionID:        ReactionIDColumn,
+		ReactionProjectID: ReactionProjectIDColumn,
+		Type:              TypeColumn,
+		CreatedTime:       CreatedTimeColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

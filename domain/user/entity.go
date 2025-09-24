@@ -1,6 +1,10 @@
 package user
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
 	UserID      UserID
@@ -15,6 +19,14 @@ type User struct {
 }
 
 type UserID string
+
+func NewUserID() (UserID, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return "", err
+	}
+	return UserID(id.String()), nil
+}
 
 type Gender string
 

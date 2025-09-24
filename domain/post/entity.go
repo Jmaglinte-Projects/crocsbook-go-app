@@ -1,6 +1,10 @@
 package post
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Post struct {
 	PostID        PostID
@@ -13,6 +17,14 @@ type Post struct {
 
 type PostID string
 
+func NewPostID() (PostID, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return "", err
+	}
+	return PostID(id.String()), nil
+}
+
 type ProjectID string
 
 type Visibility string
@@ -21,3 +33,12 @@ const (
 	Visibility_Public  Visibility = "Public"
 	Visibility_Private Visibility = "Private"
 )
+
+type ListCond struct {
+	PostID         *PostID
+	PostIDs        []PostID
+	PostProjectID  *ProjectID
+	PostProjectIDs []ProjectID
+}
+
+type CountCond ListCond

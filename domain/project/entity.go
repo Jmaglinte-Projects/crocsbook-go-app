@@ -1,6 +1,10 @@
 package project
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Project struct {
 	ProjectID      ProjectID
@@ -17,6 +21,14 @@ type Project struct {
 }
 
 type ProjectID string
+
+func NewProjectID() (ProjectID, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return "", err
+	}
+	return ProjectID(id.String()), nil
+}
 
 type UserID string
 

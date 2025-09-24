@@ -1,20 +1,39 @@
 package reaction
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Reaction struct {
-	ReactionID    ReactionID
-	PostProjectID ProjectID
-	Type          *Type
-	CreatedTime   time.Time
+	ReactionID        ReactionID
+	ReactionProjectID ProjectID
+	Type              *Type
+	CreatedTime       time.Time
 }
 
 type ReactionID string
+
+func NewReactionID() (ReactionID, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return "", err
+	}
+	return ReactionID(id.String()), nil
+}
 
 type ProjectID string
 
 type Type string
 
-var (
+const (
 	Type_Like Type = "Like"
 )
+
+type ListCond struct {
+	ReactionID  *ReactionID
+	ReactionIDs []ReactionID
+}
+
+type CountCond ListCond

@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/user"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/mysql"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/projectsvc"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/usersvc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,17 +35,28 @@ func TestProjectRepository_Store(t *testing.T) {
 	db := mysql.SetupTestDB(t)
 
 	repo := mysql.NewProjectRepository(db)
+	userSvc := mysql.NewUserService(db)
 
 	ctx := context.Background()
 	now := time.Now()
 
-	id := project.ProjectID("c2a4fea6-7112-11f0-9198-8abfd21201dc")
-	userID := project.UserID("c2a4fea6-1234-11f0-9198-8abfd21201d2")
+	id, err := project.NewProjectID()
+	assert.NoError(t, err)
+
+	// FETCH LATEST USER
+	userEntities, err := userSvc.List(ctx, user.ListCond{}, usersvc.ListOption{
+		SortKey: usersvc.ListOptionSortKey_CreatedAt_DESC,
+		Size:    1,
+	})
+	assert.NotNil(t, userEntities)
+	userEntity := userEntities[0]
+	// END OF FETCH LATEST USER
+
 	cost := int64(69000000000)
 
 	entity := &project.Project{
 		ProjectID:      id,
-		ProjectUserID:  userID,
+		ProjectUserID:  project.UserID(userEntity.UserID),
 		Name:           "Bulacan",
 		Description:    nil,
 		Thumbnail:      nil,
@@ -54,7 +67,7 @@ func TestProjectRepository_Store(t *testing.T) {
 		CompletionDate: &now,
 	}
 
-	err := repo.Store(ctx, entity)
+	err = repo.Store(ctx, entity)
 	assert.NoError(t, err)
 }
 

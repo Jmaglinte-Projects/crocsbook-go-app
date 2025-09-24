@@ -12,8 +12,8 @@ import (
 )
 
 type Reactions struct {
-	ReactionID    string `sql:"primary_key"`
-	PostProjectID string `sql:"primary_key"`
-	Type          *ReactionsType
-	CreatedTime   time.Time
+	ReactionID        string `sql:"primary_key"`
+	ReactionProjectID string `sql:"primary_key"`
+	Type              *ReactionsType
+	CreatedTime       time.Time
 }
