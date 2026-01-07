@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package post;
+
+option go_package = "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/protos";
+
+import "google/protobuf/timestamp.proto"; 
+
+service PostService {
+  rpc ShowPosts (ShowPostsIn) returns (ShowPostsOut); 
+  rpc ShowPost (ShowPostIn) returns (ShowPostOut);
+  rpc CreatePost (CreatePostIn) returns (CreatePostOut);
+  rpc UpdatePost (UpdatePostIn) returns (UpdatePostOut);
+  rpc RemovePost (RemovePostIn) returns (RemovePostOut);
+}
+
+message ShowPostsIn {}
+message ShowPostsOut {
+  repeated ViewPost items = 1;
+  uint64 total = 2;
+}
+
+message ShowPostIn {
+  string post_id = 1;
+}
+message ShowPostOut {
+  ViewPost item = 1;
+}
+
+message CreatePostIn {
+  string post_project_id = 1;
+  string content = 2;
+  PostVisibility visibility = 3;
+}
+message CreatePostOut {}
+
+message UpdatePostIn {
+  string post_id = 1;
+  string post_project_id = 2;
+
+  string content = 3;
+  PostVisibility visibility = 4; 
+}
+message UpdatePostOut {}
+
+message RemovePostIn {
+  string post_id = 1;
+}
+message RemovePostOut {}
+
+message ViewPost {
+  Post post = 1;
+}
+
+message Post {
+  string post_id = 1;
+  string post_project_id = 2;
+  string content = 3;
+  PostVisibility visibility = 4;
+  google.protobuf.Timestamp created_time = 5;
+  google.protobuf.Timestamp updated_time = 6;
+}
+
+enum PostVisibility {
+  PostVisibility_UNSPECIFIED = 0;
+  PostVisibility_Public = 1;
+  PostVisibility_Private = 2;
+}

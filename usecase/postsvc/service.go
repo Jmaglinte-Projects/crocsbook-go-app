@@ -2,14 +2,16 @@ package postsvc
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
 )
 
 type PostRepository interface {
-	Find(ctx context.Context, id string) (*post.Post, error)
+	Find(ctx context.Context, id post.PostID) (*ViewPost, error)
 	Store(ctx context.Context, entity *post.Post) error
-	Remove(ctx context.Context, ids ...string) error
+	Remove(ctx context.Context, ids ...post.PostID) error
 }
 
 type PostService interface {
@@ -33,13 +35,161 @@ const (
 type CountOption ListOption
 
 type Service interface {
+	ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut, error)
 	ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, error)
+	CreatePost(ctx context.Context, in *CreatePostIn) (*CreatePostOut, error)
+	UpdatePost(ctx context.Context, in *UpdatePostIn) (*UpdatePostOut, error)
+	RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePostOut, error)
 }
 
-type ShowPostIn struct{}
+// Todo: pagination
+type ShowPostsIn struct{}
+type ShowPostsOut struct {
+	Items []*ViewPost
+	Total uint64
+}
 
+type ShowPostIn struct {
+	PostID post.PostID
+}
 type ShowPostOut struct {
-	Item ViewPost
+	Item *ViewPost
+}
+
+type CreatePostIn struct {
+	PostProjectID post.ProjectID
+	Content       *string
+	Visibility    *post.Visibility
+}
+type CreatePostOut struct{}
+
+type UpdatePostIn struct {
+	PostID        post.PostID
+	PostProjectID post.ProjectID
+
+	Content    *string
+	Visibility *post.Visibility
+}
+type UpdatePostOut struct{}
+
+type RemovePostIn struct {
+	PostID post.PostID
+}
+type RemovePostOut struct{}
+
+type service struct {
+	postRepo PostRepository
+	postSvc  PostService
+}
+
+type ServiceDep struct {
+	PostRepo PostRepository
+	PostSvc  PostService
+}
+
+func NewService(dep ServiceDep) Service {
+	return &service{
+		postRepo: dep.PostRepo,
+		postSvc:  dep.PostSvc,
+	}
+}
+
+func (s *service) ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut, error) {
+	cond := &post.ListCond{}
+	opt := &ListOption{}
+	entities, err := s.postSvc.List(ctx, *cond, *opt)
+	if err != nil {
+		return nil, err
+	}
+
+	countCond := &post.CountCond{}
+	countOpt := &CountOption{}
+	count, err := s.postSvc.Count(ctx, *countCond, *countOpt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ShowPostsOut{
+		Items: entities,
+		Total: *count,
+	}, nil
+}
+
+func (s *service) ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, error) {
+	entity, err := s.postRepo.Find(ctx, post.PostID(in.PostID))
+	if err != nil {
+		return nil, err
+	}
+
+	if entity == nil {
+		return nil, errors.New("Entity not found")
+	}
+
+	return &ShowPostOut{
+		Item: entity,
+	}, nil
+}
+func (s *service) CreatePost(ctx context.Context, in *CreatePostIn) (*CreatePostOut, error) {
+	now := time.Now()
+
+	id, err := post.NewPostID()
+	if err != nil {
+		return nil, err
+	}
+
+	entity := &post.Post{}
+	entity.PostID = id
+	entity.PostProjectID = in.PostProjectID
+	entity.Content = in.Content
+	entity.Visibility = in.Visibility
+	entity.CreatedTime = now
+
+	err = s.postRepo.Store(ctx, entity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreatePostOut{}, nil
+}
+func (s *service) UpdatePost(ctx context.Context, in *UpdatePostIn) (*UpdatePostOut, error) {
+	now := time.Now()
+
+	entity, err := s.postRepo.Find(ctx, in.PostID)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity == nil {
+		return nil, errors.New("Entity not found")
+	}
+
+	entity.Post.Content = in.Content
+	entity.Visibility = in.Visibility
+	entity.UpdatedTime = &now
+
+	err = s.postRepo.Store(ctx, &entity.Post)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdatePostOut{}, nil
+}
+func (s *service) RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePostOut, error) {
+	entity, err := s.postRepo.Find(ctx, in.PostID)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity == nil {
+		return nil, errors.New("Entity not found")
+	}
+
+	err = s.postRepo.Remove(ctx, entity.PostID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RemovePostOut{}, nil
 }
 
 type ViewPost struct {

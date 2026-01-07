@@ -229,20 +229,23 @@ type ProjectModels []struct {
 func (src ProjectModels) ViewProject() []*projectsvc.ViewProject {
 	out := make([]*projectsvc.ViewProject, 0, len(src))
 	for _, item := range src {
-		entity := &projectsvc.ViewProject{
-			ProjectID:      project.ProjectID(item.ProjectID),
-			ProjectUserID:  project.UserID(item.ProjectUserID),
-			Name:           item.Name,
-			Description:    item.Description,
-			Thumbnail:      item.Thumbnail,
-			Location:       item.Location,
-			Cost:           item.Cost,
-			StartDate:      item.StartDate,
-			CompletionDate: item.CompletionDate,
-			CreatedTime:    item.CreatedTime,
-			UpdatedTime:    item.UpdatedTime,
+		entity := &project.Project{}
+		entity.ProjectID = project.ProjectID(item.ProjectID)
+		entity.ProjectUserID = project.UserID(item.ProjectUserID)
+		entity.Name = item.Name
+		entity.Description = item.Description
+		entity.Thumbnail = item.Thumbnail
+		entity.Location = item.Location
+		entity.Cost = item.Cost
+		entity.StartDate = item.StartDate
+		entity.CompletionDate = item.CompletionDate
+		entity.CreatedTime = item.CreatedTime
+		entity.UpdatedTime = item.UpdatedTime
+
+		vw := &projectsvc.ViewProject{
+			Project: entity,
 		}
-		out = append(out, entity)
+		out = append(out, vw)
 	}
 	return out
 }

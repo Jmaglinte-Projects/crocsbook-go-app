@@ -2,14 +2,16 @@ package mediasvc
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/media"
 )
 
 type MediaRepository interface {
-	Find(ctx context.Context, id string) (*media.Media, error)
+	Find(ctx context.Context, id media.MediaID) (*ViewMedia, error)
 	Store(ctx context.Context, entity *media.Media) error
-	Remove(ctx context.Context, ids ...string) error
+	Remove(ctx context.Context, ids ...media.MediaID) error
 }
 
 type MediaService interface {
@@ -33,13 +35,150 @@ const (
 type CountOption ListOption
 
 type Service interface {
+	ShowMedias(ctx context.Context, in *ShowMediasIn) (*ShowMediasOut, error)
 	ShowMedia(ctx context.Context, in *ShowMediaIn) (*ShowMediaOut, error)
+	CreateMedia(ctx context.Context, in *CreateMediaIn) (*CreateMediaOut, error)
+	UpdateMedia(ctx context.Context, in *UpdateMediaIn) (*UpdateMediaOut, error)
+	RemoveMedia(ctx context.Context, in *RemoveMediaIn) (*RemoveMediaOut, error)
 }
 
-type ShowMediaIn struct{}
+type ShowMediasIn struct{}
+type ShowMediasOut struct {
+	Items []*ViewMedia
+	Total *uint64
+}
 
+type ShowMediaIn struct {
+	MediaID media.MediaID
+}
 type ShowMediaOut struct {
-	Item ViewMedia
+	Item *ViewMedia
+}
+
+type CreateMediaIn struct {
+	MediaProjectID media.ProjectID
+	URL            *string
+	Type           *media.Type
+}
+type CreateMediaOut struct{}
+
+type UpdateMediaIn struct {
+	MediaID media.MediaID
+
+	// refactor this later
+	URL *string
+}
+type UpdateMediaOut struct{}
+
+type RemoveMediaIn struct {
+	MediaID media.MediaID
+}
+type RemoveMediaOut struct{}
+
+type service struct {
+	mediaRepo MediaRepository
+	mediaSvc  MediaService
+}
+
+type MediaDep struct {
+	MediaRepo MediaRepository
+	MediaSvc  MediaService
+}
+
+func NewService(dep MediaDep) Service {
+	return &service{
+		mediaRepo: dep.MediaRepo,
+		mediaSvc:  dep.MediaSvc,
+	}
+}
+
+func (s *service) ShowMedias(ctx context.Context, in *ShowMediasIn) (*ShowMediasOut, error) {
+	cond := &media.ListCond{}
+	opt := &ListOption{}
+	entities, err := s.mediaSvc.List(ctx, *cond, *opt)
+	if err != nil {
+		return nil, err
+	}
+
+	countCond := &media.CountCond{}
+	countOpt := &CountOption{}
+	count, err := s.mediaSvc.Count(ctx, *countCond, *countOpt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ShowMediasOut{
+		Items: entities,
+		Total: count,
+	}, nil
+}
+func (s *service) ShowMedia(ctx context.Context, in *ShowMediaIn) (*ShowMediaOut, error) {
+	entity, err := s.mediaRepo.Find(ctx, in.MediaID)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity == nil {
+		return nil, errors.New("Entity not found")
+	}
+
+	return &ShowMediaOut{
+		Item: entity,
+	}, nil
+}
+func (s *service) CreateMedia(ctx context.Context, in *CreateMediaIn) (*CreateMediaOut, error) {
+	now := time.Now()
+
+	id, err := media.NewMediaID()
+	if err != nil {
+		return nil, err
+	}
+
+	entity := &media.Media{}
+	entity.MediaID = id
+	entity.MediaProjectID = in.MediaProjectID
+
+	// Refactor this later
+	entity.URL = in.URL
+	entity.Type = in.Type
+	entity.CreatedTime = now
+
+	if err = s.mediaRepo.Store(ctx, entity); err != nil {
+		return nil, err
+	}
+
+	return &CreateMediaOut{}, nil
+}
+func (s *service) UpdateMedia(ctx context.Context, in *UpdateMediaIn) (*UpdateMediaOut, error) {
+	entity, err := s.mediaRepo.Find(ctx, in.MediaID)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity == nil {
+		return nil, errors.New("Entity not found")
+	}
+
+	entity.URL = in.URL
+	// todo Updated time | modify sql migration
+
+	return &UpdateMediaOut{}, nil
+}
+func (s *service) RemoveMedia(ctx context.Context, in *RemoveMediaIn) (*RemoveMediaOut, error) {
+	entity, err := s.mediaRepo.Find(ctx, in.MediaID)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity == nil {
+		return nil, errors.New("Entity not found")
+	}
+
+	if err = s.mediaRepo.Remove(ctx, in.MediaID); err != nil {
+		return nil, err
+	}
+
+	return &RemoveMediaOut{}, nil
 }
 
 type ViewMedia struct {

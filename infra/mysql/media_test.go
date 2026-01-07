@@ -20,7 +20,7 @@ func TestMediaRepository_Find(t *testing.T) {
 
 	ctx := context.Background()
 
-	id := media.MediaID("c2a4fea6-7112-11f0-9198-8abfd21201dc")
+	id := media.MediaID("887a2752-9911-11f0-afd3-8abfd21201dc")
 
 	entity, err := repo.Find(ctx, id)
 	err = mysql.PrettyPrint(entity)
@@ -75,7 +75,7 @@ func Test_MediaRepository_Remove(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := repo.Remove(ctx, media.MediaID("754ac506-9911-11f0-aed2-8abfd21201dc"))
+	err := repo.Remove(ctx, media.MediaID("887a2752-9911-11f0-afd3-8abfd21201dc"))
 	assert.NoError(t, err)
 }
 

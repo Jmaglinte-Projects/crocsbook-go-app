@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package reaction;
+
+option go_package = "github.com/Jmaglinte-Reactions/crocsbook-go-app/infra/grpc/protos";
+
+import "google/protobuf/timestamp.proto"; 
+
+service ReactionService {
+  rpc ShowReactions (ShowReactionsIn) returns (ShowReactionsOut); 
+  rpc ShowReaction (ShowReactionIn) returns (ShowReactionOut);
+  rpc CreateReaction (CreateReactionIn) returns (CreateReactionOut);
+  rpc UpdateReaction (UpdateReactionIn) returns (UpdateReactionOut);
+  rpc RemoveReaction (RemoveReactionIn) returns (RemoveReactionOut);
+}
+
+message ShowReactionsIn {}
+message ShowReactionsOut {
+  repeated ViewReaction items = 1;
+  uint64 total = 2;
+}
+
+message ShowReactionIn {
+  string reaction_id = 1;
+}
+message ShowReactionOut {
+  Reaction item = 1;
+}
+
+message CreateReactionIn {
+  string reaction_project_id = 1;
+}
+message CreateReactionOut {}
+
+message UpdateReactionIn {
+  string reaction_id = 1;
+  string reaction_project_id = 2;
+}
+message UpdateReactionOut {}
+
+message RemoveReactionIn {
+  string reaction_id = 1;
+}
+message RemoveReactionOut {}
+
+message ViewReaction {
+  Reaction reaction = 1;
+}
+
+message Reaction {
+  string reaction_id = 1;
+  string reaction_project_id = 2;
+  ReactionType type = 3;
+  google.protobuf.Timestamp created_time = 10;
+}
+
+enum ReactionType {
+  ReactionType_UNSPECIFIED = 0;
+  ReactionType_LIKE = 1;
+}
+
+

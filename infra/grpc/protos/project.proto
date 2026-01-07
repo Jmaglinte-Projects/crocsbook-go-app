@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package project;
+
+option go_package = "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/protos";
+
+import "google/protobuf/timestamp.proto"; 
+
+service ProjectService {
+  rpc ShowProjects (ShowProjectsIn) returns (ShowProjectsOut); 
+  rpc ShowProject (ShowProjectIn) returns (ShowProjectOut);
+  rpc CreateProject (CreateProjectIn) returns (CreateProjectOut);
+  rpc UpdateProject (UpdateProjectIn) returns (UpdateProjectOut);
+  rpc RemoveProject (RemoveProjectIn) returns (RemoveProjectOut);
+}
+
+message ShowProjectsIn {}
+message ShowProjectsOut {
+  repeated ViewProject items = 1;
+  uint64 total = 2;
+}
+
+message ShowProjectIn {
+  string project_id = 1;
+}
+message ShowProjectOut {
+  ViewProject item = 1;
+}
+
+message CreateProjectIn {
+  string project_user_id = 1;
+  string name = 2;
+  string description = 3;
+  string thumbnail = 4;
+  string location = 5;
+  int64 cost = 6;
+  google.protobuf.Timestamp start_date = 7;
+  google.protobuf.Timestamp completion_date = 8;
+}
+message CreateProjectOut {}
+
+message UpdateProjectIn {
+  string project_id = 1;
+
+  string name = 2;
+  string description = 3;
+  string thumbnail = 4;
+  string location = 5;
+  int64 cost = 6;
+  google.protobuf.Timestamp start_date = 8;
+  google.protobuf.Timestamp completion_date = 9;
+}
+message UpdateProjectOut {}
+
+message RemoveProjectIn {
+  string project_id = 1;
+}
+message RemoveProjectOut {}
+
+message ViewProject {
+  Project project = 1;
+}
+
+message Project {
+  string project_id = 1;
+  string project_user_id = 2;
+  string name = 3;
+  string description = 4;
+  string thumbnail = 5;
+  string location = 6;
+  int64 cost = 7;
+  google.protobuf.Timestamp start_date = 8;
+  google.protobuf.Timestamp completion_date = 9;
+  google.protobuf.Timestamp created_time = 10;
+  google.protobuf.Timestamp updated_time = 11;
+}
+

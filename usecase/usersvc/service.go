@@ -2,14 +2,16 @@ package usersvc
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/user"
 )
 
 type UserRepository interface {
-	Find(ctx context.Context, id string) (*user.User, error)
+	Find(ctx context.Context, id user.UserID) (*user.User, error)
 	Store(ctx context.Context, entity *user.User) error
-	Remove(ctx context.Context, ids ...string) error
+	Remove(ctx context.Context, ids ...user.UserID) error
 }
 
 type UserService interface {
@@ -33,17 +35,157 @@ const (
 type CountOption ListOption
 
 type Service interface {
+	ShowUsers(ctx context.Context, in *ShowUsersIn) (*ShowUsersOut, error)
 	ShowUser(ctx context.Context, in *ShowUserIn) (*ShowUserOut, error)
+	CreateUser(ctx context.Context, in *CreateUserIn) (*CreateUserOut, error)
+	UpdateUser(ctx context.Context, in *UpdateUserIn) (*UpdateUserOut, error)
+	RemoveUser(ctx context.Context, in *RemoveUserIn) (*RemoveUserOut, error)
 }
 
-type ShowUserIn struct{}
+type ShowUsersIn struct{}
+type ShowUsersOut struct {
+	Items []*ViewUser
+	Total uint64
+}
 
+type ShowUserIn struct {
+	UserID user.UserID
+}
 type ShowUserOut struct {
-	Item ViewUser
+	Item *user.User
+}
+
+type CreateUserIn struct {
+	Email    string
+	Gender   user.Gender
+	Nickname *string
+	Username *string
+	Password *string
+}
+type CreateUserOut struct{}
+
+type UpdateUserIn struct {
+	UserID user.UserID
+
+	Email    string
+	Gender   user.Gender
+	Nickname *string
+}
+type UpdateUserOut struct{}
+
+type RemoveUserIn struct {
+	UserID user.UserID
+}
+type RemoveUserOut struct{}
+
+type service struct {
+	userRepo UserRepository
+	userSvc  UserService
+}
+
+type ServiceDep struct {
+	UserRepo UserRepository
+	UserSvc  UserService
+}
+
+func NewService(dep ServiceDep) Service {
+	return &service{
+		userRepo: dep.UserRepo,
+		userSvc:  dep.UserSvc,
+	}
+}
+
+func (s *service) ShowUsers(ctx context.Context, in *ShowUsersIn) (*ShowUsersOut, error) {
+	cond := &user.ListCond{}
+	opt := &ListOption{}
+	entities, err := s.userSvc.List(ctx, *cond, *opt)
+	if err != nil {
+		return nil, err
+	}
+
+	countCond := &user.CountCond{}
+	countOpt := &CountOption{}
+	total, err := s.userSvc.Count(ctx, *countCond, *countOpt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ShowUsersOut{
+		Items: entities,
+		Total: *total,
+	}, nil
+}
+
+func (s *service) ShowUser(ctx context.Context, in *ShowUserIn) (*ShowUserOut, error) {
+	entity, err := s.userRepo.Find(ctx, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity == nil {
+		return nil, errors.New("User not found")
+	}
+
+	return &ShowUserOut{Item: entity}, nil
+}
+
+func (s *service) CreateUser(ctx context.Context, in *CreateUserIn) (*CreateUserOut, error) {
+	now := time.Now()
+	id, err := user.NewUserID()
+	if err != nil {
+		return nil, err
+	}
+
+	entity := &user.User{}
+	entity.UserID = id
+	entity.Email = in.Email
+	entity.Gender = in.Gender
+	entity.Nickname = in.Nickname
+	entity.Username = in.Username
+	entity.Password = in.Password
+	entity.CreatedTime = now
+
+	err = s.userRepo.Store(ctx, entity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateUserOut{}, nil
+}
+
+func (s *service) UpdateUser(ctx context.Context, in *UpdateUserIn) (*UpdateUserOut, error) {
+	now := time.Now()
+
+	entity, err := s.userRepo.Find(ctx, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity == nil {
+		return nil, errors.New("Entity not found")
+	}
+
+	entity.Email = in.Email
+	entity.Gender = in.Gender
+	entity.Nickname = in.Nickname
+	entity.UpdatedTime = &now
+
+	err = s.userRepo.Store(ctx, entity)
+	if err != nil {
+		return nil, err
+	}
+	return &UpdateUserOut{}, nil
+}
+func (s *service) RemoveUser(ctx context.Context, in *RemoveUserIn) (*RemoveUserOut, error) {
+	err := s.userRepo.Remove(ctx, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RemoveUserOut{}, nil
 }
 
 type ViewUser struct {
 	user.User
 	// linked other domain here whenever you need them
-
 }

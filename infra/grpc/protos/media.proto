@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package media;
+
+option go_package = "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/protos";
+
+import "google/protobuf/timestamp.proto"; 
+
+service MediaService {
+  rpc ShowMedias (ShowMediasIn) returns (ShowMediasOut); 
+  rpc ShowMedia (ShowMediaIn) returns (ShowMediaOut);
+  rpc CreateMedia (CreateMediaIn) returns (CreateMediaOut);
+  rpc UpdateMedia (UpdateMediaIn) returns (UpdateMediaOut);
+  rpc RemoveMedia (RemoveMediaIn) returns (RemoveMediaOut);
+}
+
+message ShowMediasIn {}
+message ShowMediasOut {
+  repeated ViewMedia items = 1;
+  uint64 total = 2;
+}
+
+message ShowMediaIn {
+  string media_id = 1;
+}
+message ShowMediaOut {
+  ViewMedia item = 1;
+}
+
+message CreateMediaIn {
+  string media_project_id = 1;
+  string url = 2;
+  MediaType type = 3;
+}
+message CreateMediaOut {}
+
+message UpdateMediaIn {
+  string media_id = 1;
+  string url = 2;
+}
+message UpdateMediaOut {}
+
+message RemoveMediaIn {
+  string media_id = 1;
+}
+message RemoveMediaOut {}
+
+message ViewMedia {
+  Media media = 1;
+}
+
+message Media {
+  string media_id = 1;
+  string media_project_id = 2;
+  string url = 3;
+  string type = 4;
+  google.protobuf.Timestamp created_time = 5;
+}
+
+enum MediaType {
+  MEDIA_TYPE_UNSPECIFIED = 0;
+  MEDIA_TYPE_IMAGE = 1;
+  MEDIA_TYPE_VIDEO = 2;
+}
