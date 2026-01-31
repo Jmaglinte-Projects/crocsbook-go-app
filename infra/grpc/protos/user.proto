@@ -24,7 +24,7 @@ message ShowUserIn {
   string user_id = 1;
 }
 message ShowUserOut {
-  User item = 1;
+  ViewUser item = 1;
 }
 
 message CreateUserIn {

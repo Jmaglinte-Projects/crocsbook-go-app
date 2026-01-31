@@ -13,17 +13,17 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-type UserRepository struct {
+type userRepository struct {
 	db *sql.DB
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{
+func NewUserRepository(db *sql.DB) usersvc.UserRepository {
+	return &userRepository{
 		db: db,
 	}
 }
 
-func (r *UserRepository) Find(ctx context.Context, id user.UserID) (*usersvc.ViewUser, error) {
+func (r *userRepository) Find(ctx context.Context, id user.UserID) (*usersvc.ViewUser, error) {
 	stmt := table.Users.SELECT(table.Users.AllColumns).WHERE(
 		table.Users.UserID.EQ(jet.String(string(id))))
 
@@ -47,7 +47,7 @@ func (r *UserRepository) Find(ctx context.Context, id user.UserID) (*usersvc.Vie
 	return out[0], nil
 }
 
-func (r *UserRepository) Store(ctx context.Context, entity *user.User) error {
+func (r *userRepository) Store(ctx context.Context, entity *user.User) error {
 	model := model.Users{
 		UserID:      string(entity.UserID),
 		Email:       entity.Email,
@@ -92,7 +92,7 @@ func (r *UserRepository) Store(ctx context.Context, entity *user.User) error {
 	return nil
 }
 
-func (r *UserRepository) Remove(ctx context.Context, ids ...user.UserID) error {
+func (r *userRepository) Remove(ctx context.Context, ids ...user.UserID) error {
 	idExpressions := make([]jet.Expression, 0, len(ids))
 	for _, id := range ids {
 		idExpressions = append(idExpressions, jet.String(string(id)))
@@ -107,17 +107,17 @@ func (r *UserRepository) Remove(ctx context.Context, ids ...user.UserID) error {
 	return nil
 }
 
-type UserService struct {
+type userService struct {
 	db *sql.DB
 }
 
-func NewUserService(db *sql.DB) *UserService {
-	return &UserService{
+func NewUserService(db *sql.DB) usersvc.UserService {
+	return &userService{
 		db: db,
 	}
 }
 
-func (s *UserService) List(ctx context.Context, cond user.ListCond, option usersvc.ListOption) ([]*usersvc.ViewUser, error) {
+func (s *userService) List(ctx context.Context, cond user.ListCond, option usersvc.ListOption) ([]*usersvc.ViewUser, error) {
 	stmt := table.Users.SELECT(table.Users.AllColumns)
 	pred := []jet.BoolExpression{}
 	orderBy := []jet.OrderByClause{}
@@ -179,7 +179,7 @@ func (s *UserService) List(ctx context.Context, cond user.ListCond, option users
 	return out, nil
 }
 
-func (s *UserService) Count(ctx context.Context, cond user.CountCond, option usersvc.CountOption) (*uint64, error) {
+func (s *userService) Count(ctx context.Context, cond user.CountCond, option usersvc.CountOption) (*uint64, error) {
 	stmt := table.Users.SELECT(jet.COUNT(table.Users.UserID).AS("count"))
 	pred := []jet.BoolExpression{}
 

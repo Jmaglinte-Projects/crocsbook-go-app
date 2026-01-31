@@ -13,17 +13,17 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-type MediaRepository struct {
+type mediaRepository struct {
 	db *sql.DB
 }
 
-func NewMediaRepository(db *sql.DB) *MediaRepository {
-	return &MediaRepository{
+func NewMediaRepository(db *sql.DB) mediasvc.MediaRepository {
+	return &mediaRepository{
 		db: db,
 	}
 }
 
-func (r *MediaRepository) Find(ctx context.Context, id media.MediaID) (*mediasvc.ViewMedia, error) {
+func (r *mediaRepository) Find(ctx context.Context, id media.MediaID) (*mediasvc.ViewMedia, error) {
 	stmt := table.Medias.SELECT(table.Medias.AllColumns).WHERE(
 		table.Medias.MediaID.EQ(jet.String(string(id))))
 
@@ -47,7 +47,7 @@ func (r *MediaRepository) Find(ctx context.Context, id media.MediaID) (*mediasvc
 	return out[0], nil
 }
 
-func (r *MediaRepository) Store(ctx context.Context, entity *media.Media) error {
+func (r *mediaRepository) Store(ctx context.Context, entity *media.Media) error {
 
 	m := model.Medias{}
 	m.MediaID = string(entity.MediaID)
@@ -90,7 +90,7 @@ func (r *MediaRepository) Store(ctx context.Context, entity *media.Media) error 
 	return nil
 }
 
-func (r *MediaRepository) Remove(ctx context.Context, ids ...media.MediaID) error {
+func (r *mediaRepository) Remove(ctx context.Context, ids ...media.MediaID) error {
 	idExpressions := make([]jet.Expression, 0, len(ids))
 	for _, id := range ids {
 		idExpressions = append(idExpressions, jet.String(string(id)))
@@ -105,17 +105,17 @@ func (r *MediaRepository) Remove(ctx context.Context, ids ...media.MediaID) erro
 	return nil
 }
 
-type MediaService struct {
+type mediaService struct {
 	db *sql.DB
 }
 
-func NewMediaService(db *sql.DB) *MediaService {
-	return &MediaService{
+func NewMediaService(db *sql.DB) mediasvc.MediaService {
+	return &mediaService{
 		db: db,
 	}
 }
 
-func (s *MediaService) List(ctx context.Context, cond media.ListCond, option mediasvc.ListOption) ([]*mediasvc.ViewMedia, error) {
+func (s *mediaService) List(ctx context.Context, cond media.ListCond, option mediasvc.ListOption) ([]*mediasvc.ViewMedia, error) {
 	stmt := table.Medias.SELECT(table.Medias.AllColumns)
 	pred := []jet.BoolExpression{}
 	orderBy := []jet.OrderByClause{}
@@ -177,7 +177,7 @@ func (s *MediaService) List(ctx context.Context, cond media.ListCond, option med
 	return out, nil
 }
 
-func (s *MediaService) Count(ctx context.Context, cond media.CountCond, option mediasvc.CountOption) (*uint64, error) {
+func (s *mediaService) Count(ctx context.Context, cond media.CountCond, option mediasvc.CountOption) (*uint64, error) {
 	stmt := table.Medias.SELECT(jet.COUNT(table.Medias.MediaID).AS("count"))
 	pred := []jet.BoolExpression{}
 

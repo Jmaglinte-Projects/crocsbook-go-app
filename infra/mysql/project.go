@@ -94,10 +94,10 @@ func (r *ProjectRepository) Store(ctx context.Context, entity *project.Project) 
 	return nil
 }
 
-func (r *ProjectRepository) Remove(ctx context.Context, ids ...string) error {
+func (r *ProjectRepository) Remove(ctx context.Context, ids ...project.ProjectID) error {
 	idExpressions := make([]jet.Expression, 0, len(ids))
 	for _, id := range ids {
-		idExpressions = append(idExpressions, jet.String(id))
+		idExpressions = append(idExpressions, jet.String(string(id)))
 	}
 
 	stmt := table.Projects.DELETE().WHERE(table.Projects.ProjectID.IN(idExpressions...))

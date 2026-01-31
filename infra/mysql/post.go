@@ -13,17 +13,17 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-type PostRepository struct {
+type postRepository struct {
 	db *sql.DB
 }
 
-func NewPostRepository(db *sql.DB) *PostRepository {
-	return &PostRepository{
+func NewPostRepository(db *sql.DB) postsvc.PostRepository {
+	return &postRepository{
 		db: db,
 	}
 }
 
-func (r *PostRepository) Find(ctx context.Context, id post.PostID) (*postsvc.ViewPost, error) {
+func (r *postRepository) Find(ctx context.Context, id post.PostID) (*postsvc.ViewPost, error) {
 	stmt := table.Posts.SELECT(table.Posts.AllColumns).WHERE(
 		table.Posts.PostID.EQ(jet.String(string(id))))
 
@@ -47,7 +47,7 @@ func (r *PostRepository) Find(ctx context.Context, id post.PostID) (*postsvc.Vie
 	return out[0], nil
 }
 
-func (r *PostRepository) Store(ctx context.Context, entity *post.Post) error {
+func (r *postRepository) Store(ctx context.Context, entity *post.Post) error {
 
 	m := model.Posts{}
 	m.PostID = string(entity.PostID)
@@ -91,7 +91,7 @@ func (r *PostRepository) Store(ctx context.Context, entity *post.Post) error {
 	return nil
 }
 
-func (r *PostRepository) Remove(ctx context.Context, ids ...post.PostID) error {
+func (r *postRepository) Remove(ctx context.Context, ids ...post.PostID) error {
 	idExpressions := make([]jet.Expression, 0, len(ids))
 	for _, id := range ids {
 		idExpressions = append(idExpressions, jet.String(string(id)))
@@ -106,17 +106,17 @@ func (r *PostRepository) Remove(ctx context.Context, ids ...post.PostID) error {
 	return nil
 }
 
-type PostService struct {
+type postService struct {
 	db *sql.DB
 }
 
-func NewPostService(db *sql.DB) *PostService {
-	return &PostService{
+func NewPostService(db *sql.DB) postsvc.PostService {
+	return &postService{
 		db: db,
 	}
 }
 
-func (s *PostService) List(ctx context.Context, cond post.ListCond, option postsvc.ListOption) ([]*postsvc.ViewPost, error) {
+func (s *postService) List(ctx context.Context, cond post.ListCond, option postsvc.ListOption) ([]*postsvc.ViewPost, error) {
 	stmt := table.Posts.SELECT(table.Posts.AllColumns)
 	pred := []jet.BoolExpression{}
 	orderBy := []jet.OrderByClause{}
@@ -178,7 +178,7 @@ func (s *PostService) List(ctx context.Context, cond post.ListCond, option posts
 	return out, nil
 }
 
-func (s *PostService) Count(ctx context.Context, cond post.CountCond, option postsvc.CountOption) (*uint64, error) {
+func (s *postService) Count(ctx context.Context, cond post.CountCond, option postsvc.CountOption) (*uint64, error) {
 	stmt := table.Posts.SELECT(jet.COUNT(table.Posts.PostID).AS("count"))
 	pred := []jet.BoolExpression{}
 

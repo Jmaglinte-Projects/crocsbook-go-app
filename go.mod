@@ -5,7 +5,6 @@ go 1.25.2
 require (
 	github.com/go-jet/jet/v2 v2.13.0
 	github.com/go-sql-driver/mysql v1.9.0
-	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1

@@ -80,15 +80,10 @@ type service struct {
 	mediaSvc  MediaService
 }
 
-type MediaDep struct {
-	MediaRepo MediaRepository
-	MediaSvc  MediaService
-}
-
-func NewService(dep MediaDep) Service {
+func NewService(mediaRepo MediaRepository, mediaSvc MediaService) Service {
 	return &service{
-		mediaRepo: dep.MediaRepo,
-		mediaSvc:  dep.MediaSvc,
+		mediaRepo: mediaRepo,
+		mediaSvc:  mediaSvc,
 	}
 }
 

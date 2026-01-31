@@ -82,15 +82,10 @@ type service struct {
 	postSvc  PostService
 }
 
-type ServiceDep struct {
-	PostRepo PostRepository
-	PostSvc  PostService
-}
-
-func NewService(dep ServiceDep) Service {
+func NewService(postRepo PostRepository, postSvc PostService) Service {
 	return &service{
-		postRepo: dep.PostRepo,
-		postSvc:  dep.PostSvc,
+		postRepo: postRepo,
+		postSvc:  postSvc,
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 )
 
 type UserRepository interface {
-	Find(ctx context.Context, id user.UserID) (*user.User, error)
+	Find(ctx context.Context, id user.UserID) (*ViewUser, error)
 	Store(ctx context.Context, entity *user.User) error
 	Remove(ctx context.Context, ids ...user.UserID) error
 }
@@ -52,7 +52,7 @@ type ShowUserIn struct {
 	UserID user.UserID
 }
 type ShowUserOut struct {
-	Item *user.User
+	Item *ViewUser
 }
 
 type CreateUserIn struct {
@@ -83,15 +83,10 @@ type service struct {
 	userSvc  UserService
 }
 
-type ServiceDep struct {
-	UserRepo UserRepository
-	UserSvc  UserService
-}
-
-func NewService(dep ServiceDep) Service {
+func NewService(userRepo UserRepository, userSvc UserService) Service {
 	return &service{
-		userRepo: dep.UserRepo,
-		userSvc:  dep.UserSvc,
+		userRepo: userRepo,
+		userSvc:  userSvc,
 	}
 }
 
@@ -170,7 +165,7 @@ func (s *service) UpdateUser(ctx context.Context, in *UpdateUserIn) (*UpdateUser
 	entity.Nickname = in.Nickname
 	entity.UpdatedTime = &now
 
-	err = s.userRepo.Store(ctx, entity)
+	err = s.userRepo.Store(ctx, &entity.User)
 	if err != nil {
 		return nil, err
 	}

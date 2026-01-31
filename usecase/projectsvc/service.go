@@ -90,15 +90,10 @@ type service struct {
 	projectSvc  ProjectService
 }
 
-type ServiceDep struct {
-	ProjectRepo ProjectRepository
-	ProjectSvc  ProjectService
-}
-
-func NewService(dep ServiceDep) Service {
+func NewService(projectRepo ProjectRepository, projectSvc ProjectService) Service {
 	return &service{
-		projectRepo: dep.ProjectRepo,
-		projectSvc:  dep.ProjectSvc,
+		projectRepo: projectRepo,
+		projectSvc:  projectSvc,
 	}
 }
 
