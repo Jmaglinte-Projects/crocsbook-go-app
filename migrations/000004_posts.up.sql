@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS medias (
+CREATE TABLE IF NOT EXISTS posts (
   post_id VARCHAR(40) NOT NULL,
   post_project_id VARCHAR(40) NOT NULL,
 

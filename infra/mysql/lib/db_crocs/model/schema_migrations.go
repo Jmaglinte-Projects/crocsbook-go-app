@@ -5,12 +5,9 @@
 // and will be lost if the code is regenerated
 //
 
-package enum
+package model
 
-import "github.com/go-jet/jet/v2/mysql"
-
-var ReactionsType = &struct {
-	Like mysql.StringExpression
-}{
-	Like: mysql.NewEnumValue("Like"),
+type SchemaMigrations struct {
+	Version int64 `sql:"primary_key"`
+	Dirty   bool
 }

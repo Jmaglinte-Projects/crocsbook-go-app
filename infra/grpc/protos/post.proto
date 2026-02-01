@@ -31,6 +31,8 @@ message CreatePostIn {
   string post_project_id = 1;
   string content = 2;
   PostVisibility visibility = 3;
+
+  repeated MediaImage media_images = 4;
 }
 message CreatePostOut {}
 
@@ -65,4 +67,10 @@ enum PostVisibility {
   PostVisibility_UNSPECIFIED = 0;
   PostVisibility_Public = 1;
   PostVisibility_Private = 2;
+}
+
+message MediaImage {
+  string filename = 1;
+  string content_type = 2;
+  bytes content = 3;
 }

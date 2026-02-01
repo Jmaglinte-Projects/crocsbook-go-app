@@ -28,7 +28,7 @@ message ShowMediaOut {
 }
 
 message CreateMediaIn {
-  string media_project_id = 1;
+  string media_post_id = 1;
   string url = 2;
   MediaType type = 3;
 }
@@ -51,7 +51,7 @@ message ViewMedia {
 
 message Media {
   string media_id = 1;
-  string media_project_id = 2;
+  string media_post_id = 2;
   string url = 3;
   string type = 4;
   google.protobuf.Timestamp created_time = 5;

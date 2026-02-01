@@ -56,9 +56,9 @@ type ShowMediaOut struct {
 }
 
 type CreateMediaIn struct {
-	MediaProjectID media.ProjectID
-	URL            *string
-	Type           *media.Type
+	MediaPostID media.PostID
+	URL         *string
+	Type        *media.Type
 }
 type CreateMediaOut struct{}
 
@@ -131,7 +131,7 @@ func (s *service) CreateMedia(ctx context.Context, in *CreateMediaIn) (*CreateMe
 
 	entity := &media.Media{}
 	entity.MediaID = id
-	entity.MediaProjectID = in.MediaProjectID
+	entity.MediaPostID = in.MediaPostID
 
 	// Refactor this later
 	entity.URL = in.URL

@@ -60,6 +60,8 @@ type CreatePostIn struct {
 	PostProjectID post.ProjectID
 	Content       *string
 	Visibility    *post.Visibility
+
+	MediaImages *[]*MediaImage
 }
 type CreatePostOut struct{}
 
@@ -191,4 +193,10 @@ type ViewPost struct {
 	post.Post
 	// linked other domain here whenever you need them
 
+}
+
+type MediaImage struct {
+	Filename    string
+	ContentType string
+	Content     []byte
 }

@@ -61,11 +61,17 @@ func (s *postServer) ShowPost(ctx context.Context, req *pb.ShowPostIn) (*pb.Show
 }
 
 func (s *postServer) CreatePost(ctx context.Context, req *pb.CreatePostIn) (*pb.CreatePostOut, error) {
+	mediaImages := make([]*postsvc.MediaImage, len(req.MediaImages))
+	for i, mediaImage := range req.MediaImages {
+		mediaImages[i] = rpcPostMediaImageToSvcMediaImage(mediaImage)
+	}
+
 	visibility := postVisibilityToEntity(req.Visibility)
 	in := &postsvc.CreatePostIn{
 		PostProjectID: post.ProjectID(req.PostProjectId),
 		Content:       &req.Content,
 		Visibility:    &visibility,
+		MediaImages:   &mediaImages,
 	}
 
 	_, err := s.svc.CreatePost(ctx, in)
@@ -141,5 +147,13 @@ func postVisibilityToEntity(v pb.PostVisibility) post.Visibility {
 		return post.Visibility_Private
 	default:
 		return ""
+	}
+}
+
+func rpcPostMediaImageToSvcMediaImage(src *pb.MediaImage) *postsvc.MediaImage {
+	return &postsvc.MediaImage{
+		Filename:    src.Filename,
+		ContentType: src.ContentType,
+		Content:     src.Content,
 	}
 }

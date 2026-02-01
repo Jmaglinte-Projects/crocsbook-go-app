@@ -51,7 +51,7 @@ func (r *mediaRepository) Store(ctx context.Context, entity *media.Media) error 
 
 	m := model.Medias{}
 	m.MediaID = string(entity.MediaID)
-	m.MediaProjectID = string(entity.MediaProjectID)
+	m.MediaPostID = string(entity.MediaPostID)
 	m.URL = entity.URL
 
 	t := model.MediasType(*entity.Type)
@@ -227,7 +227,7 @@ func (src MediaModels) ViewMedia() []*mediasvc.ViewMedia {
 	for _, item := range src {
 		mediaEntity := &media.Media{}
 		mediaEntity.MediaID = media.MediaID(item.MediaID)
-		mediaEntity.MediaProjectID = media.ProjectID(item.MediaProjectID)
+		mediaEntity.MediaPostID = media.PostID(item.MediaPostID)
 		mediaEntity.URL = item.URL
 
 		t := media.Type(*item.Type)

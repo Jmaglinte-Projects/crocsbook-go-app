@@ -7,11 +7,11 @@ import (
 )
 
 type Media struct {
-	MediaID        MediaID
-	MediaProjectID ProjectID
-	URL            *string
-	Type           *Type
-	CreatedTime    time.Time
+	MediaID     MediaID
+	MediaPostID PostID
+	URL         *string
+	Type        *Type
+	CreatedTime time.Time
 }
 
 type MediaID string
@@ -24,7 +24,7 @@ func NewMediaID() (MediaID, error) {
 	return MediaID(id.String()), nil
 }
 
-type ProjectID string
+type PostID string
 
 type Type string
 
@@ -37,8 +37,8 @@ type ListCond struct {
 	MediaID  *MediaID
 	MediaIDs []MediaID
 
-	MediaProjectID  *ProjectID
-	MediaProjectIDs []ProjectID
+	// MediaPostID  *PostID
+	// MediaPostIDs []PostID
 }
 
 type CountCond ListCond

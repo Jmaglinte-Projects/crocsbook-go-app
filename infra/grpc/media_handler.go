@@ -61,9 +61,9 @@ func (s *mediaServer) ShowMedia(ctx context.Context, req *pb.ShowMediaIn) (*pb.S
 func (s *mediaServer) CreateMedia(ctx context.Context, req *pb.CreateMediaIn) (*pb.CreateMediaOut, error) {
 	mediaType := metaTypeProtoToEntity(req.Type)
 	in := &mediasvc.CreateMediaIn{
-		MediaProjectID: media.ProjectID(req.MediaProjectId),
-		URL:            &req.Url,
-		Type:           &mediaType,
+		MediaPostID: media.PostID(req.MediaPostId),
+		URL:         &req.Url,
+		Type:        &mediaType,
 	}
 
 	_, err := s.svc.CreateMedia(ctx, in)
@@ -111,7 +111,7 @@ func (dest *ViewMedia) UnmarshalOriginal(src *mediasvc.ViewMedia) {
 
 	mediaType := mediaTypeToProto(*src.Type)
 	d.MediaId = string(src.MediaID)
-	d.MediaProjectId = string(src.MediaProjectID)
+	d.MediaPostId = string(src.MediaPostID)
 	d.Url = strPtrToProto(src.URL)
 	d.Type = string(mediaType)
 	d.CreatedTime = timestamppb.New(src.CreatedTime)

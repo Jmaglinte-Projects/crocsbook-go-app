@@ -58,7 +58,7 @@ func TestMediaRepository_Store(t *testing.T) {
 
 	mediaEntity := &media.Media{}
 	mediaEntity.MediaID = id
-	mediaEntity.MediaProjectID = media.ProjectID(projectEntity.ProjectID)
+	mediaEntity.MediaPostID = media.PostID(projectEntity.ProjectID)
 
 	mediaType := media.Type_Image
 	mediaEntity.Type = &mediaType

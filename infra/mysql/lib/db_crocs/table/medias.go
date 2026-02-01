@@ -17,11 +17,11 @@ type mediasTable struct {
 	mysql.Table
 
 	// Columns
-	MediaID        mysql.ColumnString
-	MediaProjectID mysql.ColumnString
-	URL            mysql.ColumnString
-	Type           mysql.ColumnString
-	CreatedTime    mysql.ColumnTimestamp
+	MediaID     mysql.ColumnString
+	MediaPostID mysql.ColumnString
+	URL         mysql.ColumnString
+	Type        mysql.ColumnString
+	CreatedTime mysql.ColumnTimestamp
 
 	AllColumns     mysql.ColumnList
 	MutableColumns mysql.ColumnList
@@ -63,25 +63,25 @@ func newMediasTable(schemaName, tableName, alias string) *MediasTable {
 
 func newMediasTableImpl(schemaName, tableName, alias string) mediasTable {
 	var (
-		MediaIDColumn        = mysql.StringColumn("media_id")
-		MediaProjectIDColumn = mysql.StringColumn("media_project_id")
-		URLColumn            = mysql.StringColumn("url")
-		TypeColumn           = mysql.StringColumn("type")
-		CreatedTimeColumn    = mysql.TimestampColumn("created_time")
-		allColumns           = mysql.ColumnList{MediaIDColumn, MediaProjectIDColumn, URLColumn, TypeColumn, CreatedTimeColumn}
-		mutableColumns       = mysql.ColumnList{URLColumn, TypeColumn, CreatedTimeColumn}
-		defaultColumns       = mysql.ColumnList{CreatedTimeColumn}
+		MediaIDColumn     = mysql.StringColumn("media_id")
+		MediaPostIDColumn = mysql.StringColumn("media_post_id")
+		URLColumn         = mysql.StringColumn("url")
+		TypeColumn        = mysql.StringColumn("type")
+		CreatedTimeColumn = mysql.TimestampColumn("created_time")
+		allColumns        = mysql.ColumnList{MediaIDColumn, MediaPostIDColumn, URLColumn, TypeColumn, CreatedTimeColumn}
+		mutableColumns    = mysql.ColumnList{URLColumn, TypeColumn, CreatedTimeColumn}
+		defaultColumns    = mysql.ColumnList{CreatedTimeColumn}
 	)
 
 	return mediasTable{
 		Table: mysql.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		MediaID:        MediaIDColumn,
-		MediaProjectID: MediaProjectIDColumn,
-		URL:            URLColumn,
-		Type:           TypeColumn,
-		CreatedTime:    CreatedTimeColumn,
+		MediaID:     MediaIDColumn,
+		MediaPostID: MediaPostIDColumn,
+		URL:         URLColumn,
+		Type:        TypeColumn,
+		CreatedTime: CreatedTimeColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
