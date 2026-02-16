@@ -9,9 +9,11 @@ import (
 type Media struct {
 	MediaID     MediaID
 	MediaPostID PostID
-	URL         *string
-	Type        *Type
+	ObjectKey   string
+	Type        Type
 	CreatedTime time.Time
+
+	MediaSet MediaSet
 }
 
 type MediaID string
@@ -28,16 +30,16 @@ type PostID string
 
 type Type string
 
-const (
-	Type_Image Type = "Image"
-	Type_Video Type = "Video"
-)
+type MediaSet struct {
+	ContentType string
+	Content     []byte
+}
 
 type ListCond struct {
 	MediaID  *MediaID
 	MediaIDs []MediaID
 
-	// MediaPostID  *PostID
+	MediaPostID *PostID
 	// MediaPostIDs []PostID
 }
 

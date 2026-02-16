@@ -6,12 +6,20 @@ import (
 	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/media"
+	"github.com/gabriel-vasile/mimetype"
 )
 
 type MediaRepository interface {
 	Find(ctx context.Context, id media.MediaID) (*ViewMedia, error)
 	Store(ctx context.Context, entity *media.Media) error
 	Remove(ctx context.Context, ids ...media.MediaID) error
+}
+
+type MediaR2Repository interface {
+	// Find returns a presigned URL for the object at key (for frontend display).
+	Find(ctx context.Context, key string) (string, error)
+	Store(ctx context.Context, entity *media.Media) error
+	Remove(ctx context.Context, keys ...string) error
 }
 
 type MediaService interface {
@@ -57,8 +65,9 @@ type ShowMediaOut struct {
 
 type CreateMediaIn struct {
 	MediaPostID media.PostID
-	URL         *string
-	Type        *media.Type
+	// Type        media.Type
+
+	Data []byte
 }
 type CreateMediaOut struct{}
 
@@ -121,6 +130,7 @@ func (s *service) ShowMedia(ctx context.Context, in *ShowMediaIn) (*ShowMediaOut
 		Item: entity,
 	}, nil
 }
+
 func (s *service) CreateMedia(ctx context.Context, in *CreateMediaIn) (*CreateMediaOut, error) {
 	now := time.Now()
 
@@ -134,8 +144,10 @@ func (s *service) CreateMedia(ctx context.Context, in *CreateMediaIn) (*CreateMe
 	entity.MediaPostID = in.MediaPostID
 
 	// Refactor this later
-	entity.URL = in.URL
-	entity.Type = in.Type
+	// entity.Type = in.Type
+	mt := mimetype.Detect(in.Data)
+	entity.MediaSet.Content = in.Data
+	entity.MediaSet.ContentType = mt.String()
 	entity.CreatedTime = now
 
 	if err = s.mediaRepo.Store(ctx, entity); err != nil {
@@ -144,6 +156,7 @@ func (s *service) CreateMedia(ctx context.Context, in *CreateMediaIn) (*CreateMe
 
 	return &CreateMediaOut{}, nil
 }
+
 func (s *service) UpdateMedia(ctx context.Context, in *UpdateMediaIn) (*UpdateMediaOut, error) {
 	entity, err := s.mediaRepo.Find(ctx, in.MediaID)
 	if err != nil {
@@ -154,7 +167,7 @@ func (s *service) UpdateMedia(ctx context.Context, in *UpdateMediaIn) (*UpdateMe
 		return nil, errors.New("Entity not found")
 	}
 
-	entity.URL = in.URL
+	// entity.URL = in.URL
 	// todo Updated time | modify sql migration
 
 	return &UpdateMediaOut{}, nil
@@ -178,6 +191,7 @@ func (s *service) RemoveMedia(ctx context.Context, in *RemoveMediaIn) (*RemoveMe
 
 type ViewMedia struct {
 	media.Media
-	// linked other domain here whenever you need them
 
+	// URL is a presigned link to display the file (e.g. for img src).
+	PresignedURL string
 }

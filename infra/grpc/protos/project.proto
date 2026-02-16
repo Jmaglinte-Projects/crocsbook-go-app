@@ -36,6 +36,8 @@ message CreateProjectIn {
   int64 cost = 6;
   google.protobuf.Timestamp start_date = 7;
   google.protobuf.Timestamp completion_date = 8;
+
+  bytes thumbnail_content = 9;
 }
 message CreateProjectOut {}
 
@@ -49,6 +51,8 @@ message UpdateProjectIn {
   int64 cost = 6;
   google.protobuf.Timestamp start_date = 8;
   google.protobuf.Timestamp completion_date = 9;
+
+  bytes thumbnail_content = 10;
 }
 message UpdateProjectOut {}
 
@@ -59,6 +63,8 @@ message RemoveProjectOut {}
 
 message ViewProject {
   Project project = 1;
+
+  string thumbnail_url = 2;
 }
 
 message Project {

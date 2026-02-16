@@ -19,7 +19,7 @@ type mediasTable struct {
 	// Columns
 	MediaID     mysql.ColumnString
 	MediaPostID mysql.ColumnString
-	URL         mysql.ColumnString
+	ObjectKey   mysql.ColumnString
 	Type        mysql.ColumnString
 	CreatedTime mysql.ColumnTimestamp
 
@@ -65,11 +65,11 @@ func newMediasTableImpl(schemaName, tableName, alias string) mediasTable {
 	var (
 		MediaIDColumn     = mysql.StringColumn("media_id")
 		MediaPostIDColumn = mysql.StringColumn("media_post_id")
-		URLColumn         = mysql.StringColumn("url")
+		ObjectKeyColumn   = mysql.StringColumn("object_key")
 		TypeColumn        = mysql.StringColumn("type")
 		CreatedTimeColumn = mysql.TimestampColumn("created_time")
-		allColumns        = mysql.ColumnList{MediaIDColumn, MediaPostIDColumn, URLColumn, TypeColumn, CreatedTimeColumn}
-		mutableColumns    = mysql.ColumnList{URLColumn, TypeColumn, CreatedTimeColumn}
+		allColumns        = mysql.ColumnList{MediaIDColumn, MediaPostIDColumn, ObjectKeyColumn, TypeColumn, CreatedTimeColumn}
+		mutableColumns    = mysql.ColumnList{ObjectKeyColumn, TypeColumn, CreatedTimeColumn}
 		defaultColumns    = mysql.ColumnList{CreatedTimeColumn}
 	)
 
@@ -79,7 +79,7 @@ func newMediasTableImpl(schemaName, tableName, alias string) mediasTable {
 		//Columns
 		MediaID:     MediaIDColumn,
 		MediaPostID: MediaPostIDColumn,
-		URL:         URLColumn,
+		ObjectKey:   ObjectKeyColumn,
 		Type:        TypeColumn,
 		CreatedTime: CreatedTimeColumn,
 

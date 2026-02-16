@@ -59,11 +59,10 @@ func (s *mediaServer) ShowMedia(ctx context.Context, req *pb.ShowMediaIn) (*pb.S
 }
 
 func (s *mediaServer) CreateMedia(ctx context.Context, req *pb.CreateMediaIn) (*pb.CreateMediaOut, error) {
-	mediaType := metaTypeProtoToEntity(req.Type)
 	in := &mediasvc.CreateMediaIn{
 		MediaPostID: media.PostID(req.MediaPostId),
-		URL:         &req.Url,
-		Type:        &mediaType,
+		// URL:         &req.Url,
+		Data: req.Data,
 	}
 
 	_, err := s.svc.CreateMedia(ctx, in)
@@ -109,32 +108,20 @@ func (dest *ViewMedia) UnmarshalOriginal(src *mediasvc.ViewMedia) {
 	}
 	d := dest.Media
 
-	mediaType := mediaTypeToProto(*src.Type)
 	d.MediaId = string(src.MediaID)
 	d.MediaPostId = string(src.MediaPostID)
-	d.Url = strPtrToProto(src.URL)
-	d.Type = string(mediaType)
+	d.ObjectKey = src.ObjectKey
+	d.Type = string(src.Type)
 	d.CreatedTime = timestamppb.New(src.CreatedTime)
 }
 
-func mediaTypeToProto(t media.Type) pb.MediaType {
-	switch t {
-	case media.Type_Image:
-		return pb.MediaType_MEDIA_TYPE_IMAGE
-	case media.Type_Video:
-		return pb.MediaType_MEDIA_TYPE_VIDEO
-	default:
-		return pb.MediaType_MEDIA_TYPE_UNSPECIFIED
-	}
-}
-
-func metaTypeProtoToEntity(t pb.MediaType) media.Type {
-	switch t {
-	case pb.MediaType_MEDIA_TYPE_IMAGE:
-		return media.Type_Image
-	case pb.MediaType_MEDIA_TYPE_VIDEO:
-		return media.Type_Video
-	default:
-		return ""
-	}
-}
+// func metaTypeProtoToEntity(t pb.MediaType) media.Type {
+// 	switch t {
+// 	case pb.MediaType_MEDIA_TYPE_IMAGE:
+// 		return media.Type_Image
+// 	case pb.MediaType_MEDIA_TYPE_VIDEO:
+// 		return media.Type_Video
+// 	default:
+// 		return ""
+// 	}
+// }

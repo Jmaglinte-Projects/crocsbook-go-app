@@ -5,6 +5,7 @@ import (
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
 	pb "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/lib"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/mediasvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/postsvc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -29,11 +30,17 @@ func (s *postServer) ShowPosts(ctx context.Context, req *pb.ShowPostsIn) (*pb.Sh
 	}
 
 	out := pb.ShowPostsOut{
-		Items: make([]*pb.ViewPost, len(posts.Items)),
+		Items: make([]*pb.ViewPost, 0, len(posts.Items)),
+		Total: posts.Total,
 	}
 	for _, post := range posts.Items {
 		item := &ViewPost{}
 		item.UnmarshalOriginal(post)
+		for _, media := range post.MediaList {
+			mediaItem := &ViewPostMedia{}
+			mediaItem.UnmarshalOriginal(media)
+			item.MediaList = append(item.MediaList, &mediaItem.ViewPostMedia)
+		}
 		out.Items = append(out.Items, &item.ViewPost)
 	}
 
@@ -51,27 +58,29 @@ func (s *postServer) ShowPost(ctx context.Context, req *pb.ShowPostIn) (*pb.Show
 	}
 
 	out := pb.ShowPostOut{
-		Item: &pb.ViewPost{},
+		Item: &pb.ViewPost{
+			MediaList: make([]*pb.ViewPostMedia, len(post.Item.MediaList)),
+		},
 	}
 	item := &ViewPost{}
 	item.UnmarshalOriginal(post.Item)
 	out.Item = &item.ViewPost
+	for _, media := range post.Item.MediaList {
+		item := &ViewPostMedia{}
+		item.UnmarshalOriginal(media)
+		out.Item.MediaList = append(out.Item.MediaList, &item.ViewPostMedia)
+	}
 
 	return &out, nil
 }
 
 func (s *postServer) CreatePost(ctx context.Context, req *pb.CreatePostIn) (*pb.CreatePostOut, error) {
-	mediaImages := make([]*postsvc.MediaImage, len(req.MediaImages))
-	for i, mediaImage := range req.MediaImages {
-		mediaImages[i] = rpcPostMediaImageToSvcMediaImage(mediaImage)
-	}
-
 	visibility := postVisibilityToEntity(req.Visibility)
 	in := &postsvc.CreatePostIn{
 		PostProjectID: post.ProjectID(req.PostProjectId),
 		Content:       &req.Content,
 		Visibility:    &visibility,
-		MediaImages:   &mediaImages,
+		MediaList:     req.Images,
 	}
 
 	_, err := s.svc.CreatePost(ctx, in)
@@ -128,6 +137,25 @@ func (dest *ViewPost) UnmarshalOriginal(src *postsvc.ViewPost) {
 	d.UpdatedTime = timePtrToProto(src.UpdatedTime)
 }
 
+type ViewPostMedia struct {
+	pb.ViewPostMedia
+}
+
+func (dest *ViewPostMedia) UnmarshalOriginal(src *mediasvc.ViewMedia) {
+	if dest.Media == nil {
+		dest.Media = &pb.PostMedia{}
+	}
+	d := dest.Media
+
+	d.MediaId = string(src.MediaID)
+	d.MediaPostId = string(src.MediaPostID)
+	d.ObjectKey = src.ObjectKey
+	d.Type = string(src.Type)
+	d.CreatedTime = timestamppb.New(src.CreatedTime)
+
+	dest.PresignedUrl = src.PresignedURL
+}
+
 func postVisibilityToProto(v post.Visibility) pb.PostVisibility {
 	switch v {
 	case post.Visibility_Public:
@@ -150,10 +178,10 @@ func postVisibilityToEntity(v pb.PostVisibility) post.Visibility {
 	}
 }
 
-func rpcPostMediaImageToSvcMediaImage(src *pb.MediaImage) *postsvc.MediaImage {
-	return &postsvc.MediaImage{
-		Filename:    src.Filename,
-		ContentType: src.ContentType,
-		Content:     src.Content,
-	}
-}
+// func rpcPostMediaImageToSvcMediaImage(src *pb.MediaImage) *postsvc.MediaImage {
+// 	return &postsvc.MediaImage{
+// 		Filename:    src.Filename,
+// 		ContentType: src.ContentType,
+// 		Content:     src.Content,
+// 	}
+// }

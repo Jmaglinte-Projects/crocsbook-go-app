@@ -18,6 +18,8 @@ type Project struct {
 	CompletionDate *time.Time
 	CreatedTime    time.Time
 	UpdatedTime    *time.Time
+
+	ThumbnailSet ThumbnailSet
 }
 
 type ProjectID string
@@ -31,6 +33,11 @@ func NewProjectID() (ProjectID, error) {
 }
 
 type UserID string
+
+type ThumbnailSet struct {
+	ContentType string
+	Content     []byte
+}
 
 type ListCond struct {
 	ProjectID  *ProjectID

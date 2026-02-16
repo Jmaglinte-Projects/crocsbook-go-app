@@ -5,7 +5,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/media"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/mediasvc"
+	"github.com/gabriel-vasile/mimetype"
 )
 
 type PostRepository interface {
@@ -61,7 +64,7 @@ type CreatePostIn struct {
 	Content       *string
 	Visibility    *post.Visibility
 
-	MediaImages *[]*MediaImage
+	MediaList [][]byte
 }
 type CreatePostOut struct{}
 
@@ -80,14 +83,18 @@ type RemovePostIn struct {
 type RemovePostOut struct{}
 
 type service struct {
-	postRepo PostRepository
-	postSvc  PostService
+	postRepo  PostRepository
+	postSvc   PostService
+	mediaRepo mediasvc.MediaRepository
+	mediaSvc  mediasvc.MediaService
 }
 
-func NewService(postRepo PostRepository, postSvc PostService) Service {
+func NewService(postRepo PostRepository, postSvc PostService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService) Service {
 	return &service{
-		postRepo: postRepo,
-		postSvc:  postSvc,
+		postRepo:  postRepo,
+		postSvc:   postSvc,
+		mediaRepo: mediaRepo,
+		mediaSvc:  mediaSvc,
 	}
 }
 
@@ -97,6 +104,21 @@ func (s *service) ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut
 	entities, err := s.postSvc.List(ctx, *cond, *opt)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, entity := range entities {
+		postID := media.PostID(entity.PostID)
+		mediaCond := &media.ListCond{
+			MediaPostID: &postID,
+		}
+
+		mediaOpt := &mediasvc.ListOption{}
+		mediaList, err := s.mediaSvc.List(ctx, *mediaCond, *mediaOpt)
+		if err != nil {
+			return nil, err
+		}
+
+		entity.MediaList = append(entity.MediaList, mediaList...)
 	}
 
 	countCond := &post.CountCond{}
@@ -122,10 +144,24 @@ func (s *service) ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, e
 		return nil, errors.New("Entity not found")
 	}
 
+	postID := media.PostID(entity.PostID)
+	mediaCond := &media.ListCond{
+		MediaPostID: &postID,
+	}
+
+	mediaOpt := &mediasvc.ListOption{}
+	mediaList, err := s.mediaSvc.List(ctx, *mediaCond, *mediaOpt)
+	if err != nil {
+		return nil, err
+	}
+
+	entity.MediaList = mediaList
+
 	return &ShowPostOut{
 		Item: entity,
 	}, nil
 }
+
 func (s *service) CreatePost(ctx context.Context, in *CreatePostIn) (*CreatePostOut, error) {
 	now := time.Now()
 
@@ -146,8 +182,20 @@ func (s *service) CreatePost(ctx context.Context, in *CreatePostIn) (*CreatePost
 		return nil, err
 	}
 
+	for _, mediaItem := range in.MediaList {
+		createMediaIn := &mediasvc.CreateMediaIn{
+			MediaPostID: media.PostID(entity.PostID),
+			Data:        mediaItem,
+		}
+		_, err = s.createMedia(ctx, createMediaIn)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &CreatePostOut{}, nil
 }
+
 func (s *service) UpdatePost(ctx context.Context, in *UpdatePostIn) (*UpdatePostOut, error) {
 	now := time.Now()
 
@@ -169,8 +217,11 @@ func (s *service) UpdatePost(ctx context.Context, in *UpdatePostIn) (*UpdatePost
 		return nil, err
 	}
 
+	// TODO: update media feature
+
 	return &UpdatePostOut{}, nil
 }
+
 func (s *service) RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePostOut, error) {
 	entity, err := s.postRepo.Find(ctx, in.PostID)
 	if err != nil {
@@ -189,10 +240,36 @@ func (s *service) RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePost
 	return &RemovePostOut{}, nil
 }
 
+func (s *service) createMedia(ctx context.Context, in *mediasvc.CreateMediaIn) (*mediasvc.CreateMediaOut, error) {
+	now := time.Now()
+
+	id, err := media.NewMediaID()
+	if err != nil {
+		return nil, err
+	}
+
+	entity := &media.Media{}
+	entity.MediaID = id
+	entity.MediaPostID = in.MediaPostID
+
+	// entity.Type = in.Type
+	mt := mimetype.Detect(in.Data)
+	entity.MediaSet.Content = in.Data
+	entity.MediaSet.ContentType = mt.String()
+	entity.CreatedTime = now
+
+	if err = s.mediaRepo.Store(ctx, entity); err != nil {
+		return nil, err
+	}
+
+	return &mediasvc.CreateMediaOut{}, nil
+}
+
 type ViewPost struct {
 	post.Post
 	// linked other domain here whenever you need them
 
+	MediaList []*mediasvc.ViewMedia
 }
 
 type MediaImage struct {

@@ -13,6 +13,8 @@ type Post struct {
 	Visibility    *Visibility
 	CreatedTime   time.Time
 	UpdatedTime   *time.Time
+
+	MediaSets []MediaSet
 }
 
 type PostID string
@@ -33,6 +35,11 @@ const (
 	Visibility_Public  Visibility = "Public"
 	Visibility_Private Visibility = "Private"
 )
+
+type MediaSet struct {
+	ContentType string
+	Content     []byte
+}
 
 type ListCond struct {
 	PostID         *PostID

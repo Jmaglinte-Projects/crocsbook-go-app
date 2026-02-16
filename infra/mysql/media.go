@@ -14,12 +14,14 @@ import (
 )
 
 type mediaRepository struct {
-	db *sql.DB
+	db          *sql.DB
+	mediaR2Repo mediasvc.MediaR2Repository
 }
 
-func NewMediaRepository(db *sql.DB) mediasvc.MediaRepository {
+func NewMediaRepository(db *sql.DB, mediaR2Repo mediasvc.MediaR2Repository) mediasvc.MediaRepository {
 	return &mediaRepository{
-		db: db,
+		db:          db,
+		mediaR2Repo: mediaR2Repo,
 	}
 }
 
@@ -43,18 +45,31 @@ func (r *mediaRepository) Find(ctx context.Context, id media.MediaID) (*mediasvc
 	}
 
 	out := dest.ViewMedia()
+	item := out[0]
 
-	return out[0], nil
+	// get the URL from the cloudflare R2 repository (skip if no R2 repo or no key)
+	if item.ObjectKey != "" && r.mediaR2Repo != nil {
+		if url, err := r.mediaR2Repo.Find(ctx, item.ObjectKey); err == nil {
+			item.PresignedURL = url
+		}
+	}
+
+	return item, nil
 }
 
 func (r *mediaRepository) Store(ctx context.Context, entity *media.Media) error {
+	if r.mediaR2Repo != nil {
+		if err := r.mediaR2Repo.Store(ctx, entity); err != nil {
+			return err
+		}
+	}
 
 	m := model.Medias{}
 	m.MediaID = string(entity.MediaID)
 	m.MediaPostID = string(entity.MediaPostID)
-	m.URL = entity.URL
+	m.ObjectKey = &entity.ObjectKey
 
-	t := model.MediasType(*entity.Type)
+	t := string(entity.Type)
 	m.Type = &t
 	m.CreatedTime = entity.CreatedTime
 
@@ -106,12 +121,14 @@ func (r *mediaRepository) Remove(ctx context.Context, ids ...media.MediaID) erro
 }
 
 type mediaService struct {
-	db *sql.DB
+	db          *sql.DB
+	mediaR2Repo mediasvc.MediaR2Repository
 }
 
-func NewMediaService(db *sql.DB) mediasvc.MediaService {
+func NewMediaService(db *sql.DB, mediaR2Repo mediasvc.MediaR2Repository) mediasvc.MediaService {
 	return &mediaService{
-		db: db,
+		db:          db,
+		mediaR2Repo: mediaR2Repo,
 	}
 }
 
@@ -134,6 +151,10 @@ func (s *mediaService) List(ctx context.Context, cond media.ListCond, option med
 		pred = append(pred, table.Medias.MediaID.IN(
 			idExpressions...,
 		))
+	}
+
+	if cond.MediaPostID != nil {
+		pred = append(pred, table.Medias.MediaPostID.EQ(jet.String(string(*cond.MediaPostID))))
 	}
 
 	switch option.SortKey {
@@ -173,6 +194,16 @@ func (s *mediaService) List(ctx context.Context, cond media.ListCond, option med
 	}
 
 	out := dest.ViewMedia()
+
+	if s.mediaR2Repo != nil {
+		for _, item := range out {
+			if item.ObjectKey != "" {
+				if url, err := s.mediaR2Repo.Find(ctx, item.ObjectKey); err == nil {
+					item.PresignedURL = url
+				}
+			}
+		}
+	}
 
 	return out, nil
 }
@@ -228,10 +259,14 @@ func (src MediaModels) ViewMedia() []*mediasvc.ViewMedia {
 		mediaEntity := &media.Media{}
 		mediaEntity.MediaID = media.MediaID(item.MediaID)
 		mediaEntity.MediaPostID = media.PostID(item.MediaPostID)
-		mediaEntity.URL = item.URL
+
+		objectKey := item.ObjectKey
+		if objectKey != nil {
+			mediaEntity.ObjectKey = *objectKey
+		}
 
 		t := media.Type(*item.Type)
-		mediaEntity.Type = &t
+		mediaEntity.Type = t
 		mediaEntity.CreatedTime = item.CreatedTime
 
 		vw := &mediasvc.ViewMedia{

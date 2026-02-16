@@ -29,8 +29,7 @@ message ShowMediaOut {
 
 message CreateMediaIn {
   string media_post_id = 1;
-  string url = 2;
-  MediaType type = 3;
+  bytes data = 2;
 }
 message CreateMediaOut {}
 
@@ -47,18 +46,15 @@ message RemoveMediaOut {}
 
 message ViewMedia {
   Media media = 1;
+
+  string presigned_url = 2;
 }
 
 message Media {
   string media_id = 1;
   string media_post_id = 2;
-  string url = 3;
+  string object_key = 3;
   string type = 4;
   google.protobuf.Timestamp created_time = 5;
 }
-
-enum MediaType {
-  MEDIA_TYPE_UNSPECIFIED = 0;
-  MEDIA_TYPE_IMAGE = 1;
-  MEDIA_TYPE_VIDEO = 2;
-}
+ 

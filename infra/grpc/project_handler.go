@@ -71,14 +71,14 @@ func (s *projectServer) CreateProject(ctx context.Context, req *pb.CreateProject
 	fmt.Println("ProjectUserId: ", req.ProjectUserId)
 
 	in := projectsvc.CreateProjectIn{
-		ProjectUserID:  project.UserID(req.ProjectUserId),
-		Name:           req.Name,
-		Description:    &req.Description,
-		Thumbnail:      &req.Thumbnail,
-		Location:       &req.Location,
-		Cost:           &req.Cost,
-		StartDate:      &startDate,
-		CompletionDate: &completionDate,
+		ProjectUserID:    project.UserID(req.ProjectUserId),
+		Name:             req.Name,
+		Description:      &req.Description,
+		ThumbnailContent: req.ThumbnailContent,
+		Location:         &req.Location,
+		Cost:             &req.Cost,
+		StartDate:        &startDate,
+		CompletionDate:   &completionDate,
 	}
 
 	_, err := s.svc.CreateProject(ctx, &in)
@@ -93,14 +93,14 @@ func (s *projectServer) UpdateProject(ctx context.Context, req *pb.UpdateProject
 	startDate := req.StartDate.AsTime()
 	completionDate := req.CompletionDate.AsTime()
 	in := projectsvc.UpdateProjectIn{
-		ProjectID:      project.ProjectID(req.ProjectId),
-		Name:           req.Name,
-		Description:    &req.Description,
-		Thumbnail:      &req.Thumbnail,
-		Location:       &req.Location,
-		Cost:           &req.Cost,
-		StartDate:      &startDate,
-		CompletionDate: &completionDate,
+		ProjectID:        project.ProjectID(req.ProjectId),
+		Name:             req.Name,
+		Description:      &req.Description,
+		ThumbnailContent: req.ThumbnailContent,
+		Location:         &req.Location,
+		Cost:             &req.Cost,
+		StartDate:        &startDate,
+		CompletionDate:   &completionDate,
 	}
 
 	_, err := s.svc.UpdateProject(ctx, &in)
@@ -167,5 +167,7 @@ func (dest *VieWProject) UnmarshalOriginal(src *projectsvc.ViewProject) {
 	if src.UpdatedTime != nil {
 		d.UpdatedTime = timestamppb.New(*src.UpdatedTime)
 	}
+
+	dest.ThumbnailUrl = src.ThumbnailURL
 
 }

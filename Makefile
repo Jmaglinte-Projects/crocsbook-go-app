@@ -1,4 +1,4 @@
-.PHONY: run_server db grpc_server migration_create migrate_up migrate_down
+.PHONY: run_server db grpc_server grpc_client migration_create migrate_up migrate_down
 
 run_server:
 	go run ./cmd/entrypoint/api/main.go
@@ -8,6 +8,9 @@ db:
 
 grpc_server:
 	./cmd/gen/grpc_server.sh
+
+grpc_client:
+	./cmd/gen/grpc_client.sh
 
 # DATABASE MIGRATION
 # Example: make migration_create name=init

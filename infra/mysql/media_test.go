@@ -16,7 +16,7 @@ import (
 func TestMediaRepository_Find(t *testing.T) {
 	db := mysql.SetupTestDB(t)
 
-	repo := mysql.NewMediaRepository(db)
+	repo := mysql.NewMediaRepository(db, nil)
 
 	ctx := context.Background()
 
@@ -34,7 +34,7 @@ func TestMediaRepository_Find(t *testing.T) {
 func TestMediaRepository_Store(t *testing.T) {
 	db := mysql.SetupTestDB(t)
 
-	repo := mysql.NewMediaRepository(db)
+	repo := mysql.NewMediaRepository(db, nil)
 	projectSvc := mysql.NewProjectService(db)
 
 	ctx := context.Background()
@@ -60,8 +60,7 @@ func TestMediaRepository_Store(t *testing.T) {
 	mediaEntity.MediaID = id
 	mediaEntity.MediaPostID = media.PostID(projectEntity.ProjectID)
 
-	mediaType := media.Type_Image
-	mediaEntity.Type = &mediaType
+	mediaEntity.Type = media.Type("image/webp")
 	mediaEntity.CreatedTime = now
 
 	err = repo.Store(ctx, mediaEntity)
@@ -71,7 +70,7 @@ func TestMediaRepository_Store(t *testing.T) {
 func Test_MediaRepository_Remove(t *testing.T) {
 	db := mysql.SetupTestDB(t)
 
-	repo := mysql.NewMediaRepository(db)
+	repo := mysql.NewMediaRepository(db, nil)
 
 	ctx := context.Background()
 
@@ -83,7 +82,7 @@ func Test_MediaRepository_Remove(t *testing.T) {
 func TestMediaService_List(t *testing.T) {
 	db := mysql.SetupTestDB(t)
 
-	service := mysql.NewMediaService(db)
+	service := mysql.NewMediaService(db, nil)
 
 	ctx := context.Background()
 
@@ -111,7 +110,7 @@ func TestMediaService_List(t *testing.T) {
 func TestMediaService_Count(t *testing.T) {
 	db := mysql.SetupTestDB(t)
 
-	service := mysql.NewMediaService(db)
+	service := mysql.NewMediaService(db, nil)
 
 	ctx := context.Background()
 

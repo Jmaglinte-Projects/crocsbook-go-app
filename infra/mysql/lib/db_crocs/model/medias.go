@@ -14,7 +14,7 @@ import (
 type Medias struct {
 	MediaID     string `sql:"primary_key"`
 	MediaPostID string `sql:"primary_key"`
-	URL         *string
-	Type        *MediasType
+	ObjectKey   *string
+	Type        *string
 	CreatedTime time.Time
 }

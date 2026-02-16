@@ -32,7 +32,7 @@ message CreatePostIn {
   string content = 2;
   PostVisibility visibility = 3;
 
-  repeated MediaImage media_images = 4;
+  repeated bytes images = 4;
 }
 message CreatePostOut {}
 
@@ -42,6 +42,8 @@ message UpdatePostIn {
 
   string content = 3;
   PostVisibility visibility = 4; 
+
+  
 }
 message UpdatePostOut {}
 
@@ -52,6 +54,8 @@ message RemovePostOut {}
 
 message ViewPost {
   Post post = 1;
+
+  repeated ViewPostMedia media_list = 2;
 }
 
 message Post {
@@ -63,14 +67,25 @@ message Post {
   google.protobuf.Timestamp updated_time = 6;
 }
 
+
+message ViewPostMedia {
+  PostMedia media = 1;
+
+  string presigned_url = 2;
+}
+
+message PostMedia {
+  string media_id = 1;
+  string media_post_id = 2;
+  string object_key = 3;
+  string type = 4;
+  google.protobuf.Timestamp created_time = 5;
+}
+
+
 enum PostVisibility {
   PostVisibility_UNSPECIFIED = 0;
   PostVisibility_Public = 1;
   PostVisibility_Private = 2;
 }
-
-message MediaImage {
-  string filename = 1;
-  string content_type = 2;
-  bytes content = 3;
-}
+ 

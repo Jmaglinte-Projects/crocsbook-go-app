@@ -3,15 +3,24 @@ package projectsvc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
+	"github.com/gabriel-vasile/mimetype"
 )
 
 type ProjectRepository interface {
 	Find(ctx context.Context, id project.ProjectID) (*ViewProject, error)
 	Store(ctx context.Context, entity *project.Project) error
 	Remove(ctx context.Context, ids ...project.ProjectID) error
+}
+
+type ProjectR2Repository interface {
+	// Find returns a presigned URL for the object at key (for frontend display).
+	Find(ctx context.Context, key string) (string, error)
+	Store(ctx context.Context, entity *project.Project) error
+	Remove(ctx context.Context, keys ...string) error
 }
 
 type ProjectService interface {
@@ -59,11 +68,12 @@ type CreateProjectIn struct {
 	ProjectUserID  project.UserID
 	Name           string
 	Description    *string
-	Thumbnail      *string
 	Location       *string
 	Cost           *int64
 	StartDate      *time.Time
 	CompletionDate *time.Time
+
+	ThumbnailContent []byte
 }
 type CreateProjectOut struct{}
 
@@ -72,11 +82,12 @@ type UpdateProjectIn struct {
 
 	Name           string
 	Description    *string
-	Thumbnail      *string
 	Location       *string
 	Cost           *int64
 	StartDate      *time.Time
 	CompletionDate *time.Time
+
+	ThumbnailContent []byte
 }
 type UpdateProjectOut struct{}
 
@@ -86,14 +97,16 @@ type RemoveProjectIn struct {
 type RemoveProjectOut struct{}
 
 type service struct {
-	projectRepo ProjectRepository
-	projectSvc  ProjectService
+	projectRepo   ProjectRepository
+	projectSvc    ProjectService
+	projectR2Repo ProjectR2Repository
 }
 
-func NewService(projectRepo ProjectRepository, projectSvc ProjectService) Service {
+func NewService(projectRepo ProjectRepository, projectSvc ProjectService, projectR2Repo ProjectR2Repository) Service {
 	return &service{
-		projectRepo: projectRepo,
-		projectSvc:  projectSvc,
+		projectRepo:   projectRepo,
+		projectSvc:    projectSvc,
+		projectR2Repo: projectR2Repo,
 	}
 }
 
@@ -104,6 +117,15 @@ func (s *service) ShowProjects(ctx context.Context, in *ShowProjectsIn) (*ShowPr
 	entities, err := s.projectSvc.List(ctx, *cond, *opt)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, entity := range entities {
+		presignedURL, err := s.projectR2Repo.Find(ctx, *entity.Thumbnail)
+		if err != nil {
+			return nil, err
+		}
+
+		entity.ThumbnailURL = presignedURL
 	}
 
 	countCond := &project.CountCond{}
@@ -128,6 +150,12 @@ func (s *service) ShowProject(ctx context.Context, in *ShowProjectIn) (*ShowProj
 		return nil, errors.New("Entity not found")
 	}
 
+	presignedURL, err := s.projectR2Repo.Find(ctx, *entity.Thumbnail)
+	if err != nil {
+		return nil, err
+	}
+	entity.ThumbnailURL = presignedURL
+
 	return &ShowProjectOut{
 		Item: entity,
 	}, nil
@@ -146,14 +174,26 @@ func (s *service) CreateProject(ctx context.Context, in *CreateProjectIn) (*Crea
 	entity.ProjectUserID = in.ProjectUserID
 	entity.Name = in.Name
 	entity.Description = in.Description
-	entity.Thumbnail = in.Thumbnail
 	entity.Location = in.Location
 	entity.Cost = in.Cost
 	entity.StartDate = in.StartDate
 	entity.CompletionDate = in.CompletionDate
 	entity.CreatedTime = now
 
+	mt := mimetype.Detect(in.ThumbnailContent)
+	thumbnailSet := project.ThumbnailSet{
+		ContentType: mt.String(),
+		Content:     in.ThumbnailContent,
+	}
+	entity.ThumbnailSet = thumbnailSet
+
 	if err = s.projectRepo.Store(ctx, entity); err != nil {
+		fmt.Println("Error storing project to mysql")
+		return nil, err
+	}
+
+	if err = s.projectR2Repo.Store(ctx, entity); err != nil {
+		fmt.Println("Error storing thumbnail to r2")
 		return nil, err
 	}
 
@@ -175,14 +215,26 @@ func (s *service) UpdateProject(ctx context.Context, in *UpdateProjectIn) (*Upda
 	entity.Name = in.Name
 	entity.Description = in.Description
 
-	// TODO: thumbnail should not be string type here.. refactor later
-	entity.Thumbnail = in.Thumbnail
-
 	entity.Location = in.Location
 	entity.Cost = in.Cost
 	entity.StartDate = in.StartDate
 	entity.CompletionDate = in.CompletionDate
 	entity.UpdatedTime = &now
+
+	if len(in.ThumbnailContent) > 0 {
+		mt := mimetype.Detect(in.ThumbnailContent)
+		thumbnailSet := project.ThumbnailSet{
+			ContentType: mt.String(),
+			Content:     in.ThumbnailContent,
+		}
+		entity.ThumbnailSet = thumbnailSet
+
+		// thumbnail should be set after this
+		if err = s.projectR2Repo.Store(ctx, entity.Project); err != nil {
+			fmt.Println("Error storing thumbnail to r2")
+			return nil, err
+		}
+	}
 
 	if err := s.projectRepo.Store(ctx, entity.Project); err != nil {
 		return nil, err
@@ -204,9 +256,17 @@ func (s *service) RemoveProject(ctx context.Context, in *RemoveProjectIn) (*Remo
 	if err := s.projectRepo.Remove(ctx, in.ProjectID); err != nil {
 		return nil, err
 	}
+
+	key := *entity.Thumbnail
+	if err := s.projectR2Repo.Remove(ctx, key); err != nil {
+		return nil, err
+	}
+
 	return &RemoveProjectOut{}, nil
 }
 
 type ViewProject struct {
 	*project.Project
+
+	ThumbnailURL string
 }

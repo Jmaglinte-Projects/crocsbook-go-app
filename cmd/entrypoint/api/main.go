@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -12,10 +13,15 @@ import (
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc"
 	pb "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/lib"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/mysql"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/r2"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/mediasvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/postsvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/projectsvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/usersvc"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	awscredentials "github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	mysql2 "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 	grpc2 "google.golang.org/grpc"
@@ -34,6 +40,25 @@ func main() {
 		log.Fatal("Error connecting to mysql")
 	}
 
+	r2Client, err := NewR2Client(context.Background())
+	if err != nil {
+		log.Fatal("Error connecting to r2")
+	}
+
+	// cloudflare r2
+	var (
+		mediaR2Repo   mediasvc.MediaR2Repository
+		projectR2Repo projectsvc.ProjectR2Repository
+	)
+	{
+		fmt.Println("---------R2 BUCKET NAME------------")
+		bucketName := os.Getenv("R2_BUCKET_NAME")
+		fmt.Println("--------------------------------")
+
+		mediaR2Repo = r2.NewMediaR2Repository(r2Client, bucketName)
+		projectR2Repo = r2.NewProjectR2Repository(r2Client, bucketName)
+	}
+
 	var (
 		// repository
 		mediaRepo   mediasvc.MediaRepository
@@ -48,12 +73,12 @@ func main() {
 		userSvc    usersvc.UserService
 	)
 	{
-		mediaRepo = mysql.NewMediaRepository(db)
+		mediaRepo = mysql.NewMediaRepository(db, mediaR2Repo)
 		postRepo = mysql.NewPostRepository(db)
 		projectRepo = mysql.NewProjectRepository(db)
 		userRepo = mysql.NewUserRepository(db)
 
-		mediaSvc = mysql.NewMediaService(db)
+		mediaSvc = mysql.NewMediaService(db, mediaR2Repo)
 		postSvc = mysql.NewPostService(db)
 		projectSvc = mysql.NewProjectService(db)
 		userSvc = mysql.NewUserService(db)
@@ -68,8 +93,8 @@ func main() {
 	)
 	{
 		mediaUcSvc = mediasvc.NewService(mediaRepo, mediaSvc)
-		postUcSvc = postsvc.NewService(postRepo, postSvc)
-		projectUcSvc = projectsvc.NewService(projectRepo, projectSvc)
+		postUcSvc = postsvc.NewService(postRepo, postSvc, mediaRepo, mediaSvc)
+		projectUcSvc = projectsvc.NewService(projectRepo, projectSvc, projectR2Repo)
 		userUcSvc = usersvc.NewService(userRepo, userSvc)
 	}
 
@@ -159,6 +184,22 @@ func NewMySQLConnection() (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func NewR2Client(ctx context.Context) (*s3.Client, error) {
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(os.Getenv("R2_ACCESS_KEY_ID"), os.Getenv("R2_ACCESS_KEY_SECRET"), "")),
+		config.WithRegion("auto"), // Required by SDK but not used by R2
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", os.Getenv("R2_ACCOUNT_ID")))
+	})
+
+	return client, nil
 }
 
 func loadEnv() error {
