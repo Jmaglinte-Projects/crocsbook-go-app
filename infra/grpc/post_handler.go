@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
@@ -22,7 +23,16 @@ func NewPostHandler(svc postsvc.Service) pb.PostServiceServer {
 }
 
 func (s *postServer) ShowPosts(ctx context.Context, req *pb.ShowPostsIn) (*pb.ShowPostsOut, error) {
-	in := &postsvc.ShowPostsIn{}
+	postFilter := &PostFilter{}
+	postFilter.Marshal(req.Filter)
+	filterSvc := postsvc.Filter(*postFilter)
+
+	in := &postsvc.ShowPostsIn{
+		Filter: &filterSvc,
+	}
+
+	b, _ := json.MarshalIndent(req.Filter, "", "  ")
+	fmt.Println("in.Filter:", string(b))
 
 	posts, err := s.svc.ShowPosts(ctx, in)
 	if err != nil {
@@ -106,6 +116,38 @@ func (s *postServer) RemovePost(ctx context.Context, req *pb.RemovePostIn) (*pb.
 	return &pb.RemovePostOut{}, nil
 }
 
+func (s *postServer) ShowPostByProjectId(ctx context.Context, req *pb.ShowPostByProjectIdIn) (*pb.ShowPostByProjectIdOut, error) {
+	filter := &PostFilter{}
+	filter.Marshal(req.Filter)
+	filterSvc := postsvc.Filter(*filter)
+
+	// b, _ := json.MarshalIndent(postFilter, "", "  ")
+	// fmt.Println("postFilter:", string(b))
+
+	in := &postsvc.ShowPostByProjectIdIn{
+		ProjectID: post.ProjectID(req.ProjectId),
+		Filter:    &filterSvc,
+	}
+
+	posts, err := s.svc.ShowPostByProjectId(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	out := pb.ShowPostsOut{
+		Items: make([]*pb.Post, 0, len(posts.Items)),
+		Total: posts.Total,
+	}
+
+	for _, p := range posts.Items {
+		item := &Post{}
+		item.UnmarshalOriginal(p)
+		out.Items = append(out.Items, &item.Post)
+	}
+
+	return &pb.ShowPostByProjectIdOut{Items: out.Items, Total: out.Total}, nil
+}
+
 type Post struct {
 	pb.Post
 }
@@ -128,7 +170,6 @@ func (dest *Post) UnmarshalOriginal(src *postsvc.ViewPost) {
 	dest.LastPostTime = timestamppb.New(src.LastPostTime)
 
 	if src.Project != nil {
-		fmt.Println("src.Project:", src.Project.ProjectID)
 		dest.Project = &pb.Post_Project{}
 		dest.Project.ProjectId = string(src.Project.ProjectID)
 		dest.Project.ProjectUserId = string(src.Project.ProjectUserID)
@@ -192,6 +233,19 @@ func postVisibilityToEntity(v pb.PostVisibility) post.Visibility {
 	default:
 		return ""
 	}
+}
+
+type PostFilter postsvc.Filter
+
+func (dest *PostFilter) Marshal(src *pb.PostFilter) {
+	if src.CreatedTime != nil {
+		t := src.CreatedTime.AsTime()
+		dest.CreatedTime = &t
+	}
+
+	dest.SortKey = post.PostSortKey(src.SortKey)
+	dest.Size = src.Size
+	dest.Offset = &src.Offset
 }
 
 // func rpcPostMediaImageToSvcMediaImage(src *pb.MediaImage) *postsvc.MediaImage {

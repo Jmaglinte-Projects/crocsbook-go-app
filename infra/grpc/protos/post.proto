@@ -12,9 +12,13 @@ service PostService {
   rpc CreatePost (CreatePostIn) returns (CreatePostOut);
   rpc UpdatePost (UpdatePostIn) returns (UpdatePostOut);
   rpc RemovePost (RemovePostIn) returns (RemovePostOut);
+
+  rpc ShowPostByProjectId (ShowPostByProjectIdIn) returns (ShowPostByProjectIdOut);
 }
 
-message ShowPostsIn {}
+message ShowPostsIn {
+  PostFilter filter = 1;
+}
 message ShowPostsOut {
   repeated Post items = 1;
   uint64 total = 2;
@@ -52,9 +56,30 @@ message RemovePostIn {
 }
 message RemovePostOut {}
 
-// message ViewPost {
-//   Post post = 1;
-// }
+
+message ShowPostByProjectIdIn {
+  string project_id = 1;
+
+  PostFilter filter = 2;
+}
+message ShowPostByProjectIdOut {
+  repeated Post items = 1;
+  uint64 total = 2;
+}
+
+message PostFilter {
+  google.protobuf.Timestamp created_time = 1;
+
+  PostSortKey sort_key = 2;
+  int64 size = 3;
+  int64 offset = 4;
+}
+
+enum PostSortKey {
+  PostSortKey_UNSPECIFIED = 0;
+  PostSortKey_CreatedTime_ASC = 1;
+  PostSortKey_CreatedTime_DESC = 2;
+}
 
 message Post {
   string post_id = 1;

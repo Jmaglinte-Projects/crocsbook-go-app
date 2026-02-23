@@ -46,6 +46,26 @@ type ListCond struct {
 	PostIDs        []PostID
 	PostProjectID  *ProjectID
 	PostProjectIDs []ProjectID
+	CreatedTime    *time.Time
+
+	SortKey PostSortKey
+	Size    int64
+	Offset  *int64
 }
 
 type CountCond ListCond
+
+type ListPostStatsByProjectIdsCond struct {
+	CreatedTime *time.Time
+
+	SortKey PostSortKey
+	Size    int64
+	Offset  *int64
+}
+
+type PostSortKey uint
+
+const (
+	PostSortKey_CreatedTime_ASC PostSortKey = iota
+	PostSortKey_CreatedTime_DESC
+)

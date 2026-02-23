@@ -10,7 +10,6 @@ import (
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/mysql"
-	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/postsvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/projectsvc"
 	"github.com/stretchr/testify/assert"
 )
@@ -97,15 +96,12 @@ func TestPostService_List(t *testing.T) {
 
 	cond := post.ListCond{
 		// PostID: &postID,
-	}
-
-	opt := postsvc.ListOption{
-		SortKey: postsvc.ListOptionSortKey_CreatedAt_ASC,
+		SortKey: post.PostSortKey_CreatedTime_DESC,
 		Offset:  &offset,
 		Size:    10,
 	}
 
-	entities, err := service.List(ctx, cond, opt)
+	entities, err := service.List(ctx, cond)
 	assert.NoError(t, err)
 	assert.NotNil(t, entities)
 
@@ -121,9 +117,7 @@ func TestPostService_Count(t *testing.T) {
 	ctx := context.Background()
 
 	cond := post.CountCond{}
-	opt := postsvc.CountOption{}
-
-	count, err := service.Count(ctx, cond, opt)
+	count, err := service.Count(ctx, cond)
 	assert.NoError(t, err)
 
 	err = mysql.PrettyPrint(count)
@@ -139,7 +133,8 @@ func TestPostService_ListPostStatsByProjectIds(t *testing.T) {
 
 	projectIds := []post.ProjectID{post.ProjectID("ac13a9cc-0f77-11f1-826f-8abfd21201dc")}
 
-	out, err := service.ListPostStatsByProjectIds(ctx, projectIds...)
+	cond := &post.ListPostStatsByProjectIdsCond{}
+	out, err := service.ListPostStatsByProjectIds(ctx, *cond, projectIds...)
 	assert.NoError(t, err)
 	assert.NotNil(t, out)
 

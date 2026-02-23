@@ -22,25 +22,10 @@ type PostRepository interface {
 }
 
 type PostService interface {
-	List(ctx context.Context, cond post.ListCond, option ListOption) ([]*ViewPost, error)
-	Count(ctx context.Context, cond post.CountCond, option CountOption) (*uint64, error)
-	ListPostStatsByProjectIds(ctx context.Context, projectId ...post.ProjectID) ([]*ListPostStatsByProjectIds, error)
+	List(ctx context.Context, cond post.ListCond) ([]*ViewPost, error)
+	Count(ctx context.Context, cond post.CountCond) (*uint64, error)
+	ListPostStatsByProjectIds(ctx context.Context, cond post.ListPostStatsByProjectIdsCond, projectId ...post.ProjectID) ([]*ListPostStatsByProjectIds, error)
 }
-
-type ListOption struct {
-	SortKey ListOptionSortKey
-	Size    int64
-	Offset  *int64
-}
-
-type ListOptionSortKey int
-
-const (
-	ListOptionSortKey_CreatedAt_ASC ListOptionSortKey = iota
-	ListOptionSortKey_CreatedAt_DESC
-)
-
-type CountOption ListOption
 
 type Service interface {
 	ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut, error)
@@ -48,10 +33,14 @@ type Service interface {
 	CreatePost(ctx context.Context, in *CreatePostIn) (*CreatePostOut, error)
 	UpdatePost(ctx context.Context, in *UpdatePostIn) (*UpdatePostOut, error)
 	RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePostOut, error)
+
+	ShowPostByProjectId(ctx context.Context, in *ShowPostByProjectIdIn) (*ShowPostByProjectIdOut, error)
 }
 
 // Todo: pagination
-type ShowPostsIn struct{}
+type ShowPostsIn struct {
+	Filter *Filter
+}
 type ShowPostsOut struct {
 	Items []*ViewPost
 	Total uint64
@@ -87,6 +76,16 @@ type RemovePostIn struct {
 }
 type RemovePostOut struct{}
 
+type ShowPostByProjectIdIn struct {
+	ProjectID post.ProjectID
+
+	Filter *Filter
+}
+type ShowPostByProjectIdOut struct {
+	Items []*ViewPost
+	Total uint64
+}
+
 type service struct {
 	postRepo      PostRepository
 	postSvc       PostService
@@ -109,8 +108,9 @@ func NewService(postRepo PostRepository, postSvc PostService, mediaRepo mediasvc
 
 func (s *service) ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut, error) {
 	cond := &post.ListCond{}
-	opt := &ListOption{}
-	entities, err := s.postSvc.List(ctx, *cond, *opt)
+	in.Filter.Unmarshal(cond)
+
+	entities, err := s.postSvc.List(ctx, *cond)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +131,7 @@ func (s *service) ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut
 	// fmt.Println("entities:", string(b))
 
 	countCond := &post.CountCond{}
-	countOpt := &CountOption{}
-	count, err := s.postSvc.Count(ctx, *countCond, *countOpt)
+	count, err := s.postSvc.Count(ctx, *countCond)
 	if err != nil {
 		return nil, err
 	}
@@ -247,6 +246,35 @@ func (s *service) RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePost
 	return &RemovePostOut{}, nil
 }
 
+func (s *service) ShowPostByProjectId(ctx context.Context, in *ShowPostByProjectIdIn) (*ShowPostByProjectIdOut, error) {
+	cond := &post.ListCond{
+		PostProjectID: &in.ProjectID,
+	}
+	// for filters
+	in.Filter.Unmarshal(cond)
+
+	b, _ := json.MarshalIndent(cond, "", "  ")
+	fmt.Println("ShowPostByProjectId cond:", string(b))
+
+	entities, err := s.postSvc.List(ctx, *cond)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.setMedia(ctx, entities...); err != nil {
+		return nil, err
+	}
+
+	if err := s.setProject(ctx, entities...); err != nil {
+		return nil, err
+	}
+
+	return &ShowPostByProjectIdOut{
+		Items: entities,
+		Total: uint64(len(entities)),
+	}, nil
+}
+
 func (s *service) createMedia(ctx context.Context, in *mediasvc.CreateMediaIn) (*mediasvc.CreateMediaOut, error) {
 	now := time.Now()
 
@@ -334,7 +362,8 @@ func (s *service) setPostStatsByProjectIds(ctx context.Context, entities ...*Vie
 		projectIDs = append(projectIDs, post.ProjectID(entity.PostProjectID))
 	}
 
-	out, err := s.postSvc.ListPostStatsByProjectIds(ctx, projectIDs...)
+	cond := &post.ListPostStatsByProjectIdsCond{}
+	out, err := s.postSvc.ListPostStatsByProjectIds(ctx, *cond, projectIDs...)
 	if err != nil {
 		fmt.Println("Error counting total posts by project ID")
 		return err
@@ -353,6 +382,27 @@ func (s *service) setPostStatsByProjectIds(ctx context.Context, entities ...*Vie
 	}
 
 	return nil
+}
+
+type Filter struct {
+	CreatedTime *time.Time
+
+	SortKey post.PostSortKey
+	Size    int64
+	Offset  *int64
+}
+
+func (src *Filter) Unmarshal(dest *post.ListCond) {
+	if src.CreatedTime != nil {
+		dest.CreatedTime = src.CreatedTime
+	}
+
+	dest.SortKey = src.SortKey
+	dest.Size = src.Size
+
+	if src.Offset != nil {
+		dest.Offset = src.Offset
+	}
 }
 
 type ViewPost struct {

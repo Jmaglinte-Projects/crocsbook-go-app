@@ -118,7 +118,7 @@ func NewPostService(db *sql.DB) postsvc.PostService {
 	}
 }
 
-func (s *postService) List(ctx context.Context, cond post.ListCond, option postsvc.ListOption) ([]*postsvc.ViewPost, error) {
+func (s *postService) List(ctx context.Context, cond post.ListCond) ([]*postsvc.ViewPost, error) {
 	stmt := table.Posts.SELECT(table.Posts.AllColumns)
 	pred := []jet.BoolExpression{}
 	orderBy := []jet.OrderByClause{}
@@ -139,10 +139,34 @@ func (s *postService) List(ctx context.Context, cond post.ListCond, option posts
 		))
 	}
 
-	switch option.SortKey {
-	case postsvc.ListOptionSortKey_CreatedAt_ASC:
+	if cond.PostProjectID != nil {
+		pred = append(pred, table.Posts.PostProjectID.EQ(jet.String(string(*cond.PostProjectID))))
+	}
+
+	if len(cond.PostProjectIDs) > 0 {
+		idExpressions := make([]jet.Expression, 0, len(cond.PostProjectIDs))
+		for _, id := range cond.PostProjectIDs {
+			idExpressions = append(idExpressions, jet.String(string(id)))
+		}
+
+		pred = append(pred, table.Posts.PostProjectID.IN(idExpressions...))
+	}
+
+	if cond.CreatedTime != nil {
+		start := *cond.CreatedTime
+		end := start.AddDate(0, 1, 0) // first day of next month
+		pred = append(pred,
+			table.Posts.CreatedTime.GT_EQ(jet.Timestamp(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0)),
+			table.Posts.CreatedTime.LT(jet.Timestamp(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0)),
+		)
+	}
+
+	switch cond.SortKey {
+	case post.PostSortKey_CreatedTime_ASC:
 		orderBy = append(orderBy, table.Posts.CreatedTime.ASC())
-	case postsvc.ListOptionSortKey_CreatedAt_DESC:
+	case post.PostSortKey_CreatedTime_DESC:
+		orderBy = append(orderBy, table.Posts.CreatedTime.DESC())
+	default:
 		orderBy = append(orderBy, table.Posts.CreatedTime.DESC())
 	}
 
@@ -152,12 +176,12 @@ func (s *postService) List(ctx context.Context, cond post.ListCond, option posts
 
 	stmt = stmt.ORDER_BY(orderBy...)
 
-	if option.Offset != nil {
-		stmt = stmt.OFFSET(*option.Offset)
+	if cond.Offset != nil {
+		stmt = stmt.OFFSET(*cond.Offset)
 	}
 
-	if option.Size > 0 {
-		stmt = stmt.LIMIT(option.Size)
+	if cond.Size > 0 {
+		stmt = stmt.LIMIT(cond.Size)
 	}
 
 	debugSql := stmt.DebugSql()
@@ -168,6 +192,7 @@ func (s *postService) List(ctx context.Context, cond post.ListCond, option posts
 	dest := &PostModels{}
 	err := stmt.Query(s.db, dest)
 	if err != nil {
+		fmt.Println("error:", err)
 		return nil, err
 	}
 
@@ -180,7 +205,7 @@ func (s *postService) List(ctx context.Context, cond post.ListCond, option posts
 	return out, nil
 }
 
-func (s *postService) Count(ctx context.Context, cond post.CountCond, option postsvc.CountOption) (*uint64, error) {
+func (s *postService) Count(ctx context.Context, cond post.CountCond) (*uint64, error) {
 	stmt := table.Posts.SELECT(jet.COUNT(table.Posts.PostID).AS("count"))
 	pred := []jet.BoolExpression{}
 
@@ -197,6 +222,28 @@ func (s *postService) Count(ctx context.Context, cond post.CountCond, option pos
 		pred = append(pred, table.Posts.PostID.IN(
 			idExpressions...,
 		))
+	}
+
+	if cond.PostProjectID != nil {
+		pred = append(pred, table.Posts.PostProjectID.EQ(jet.String(string(*cond.PostProjectID))))
+	}
+
+	if len(cond.PostProjectIDs) > 0 {
+		idExpressions := make([]jet.Expression, 0, len(cond.PostProjectIDs))
+		for _, id := range cond.PostProjectIDs {
+			idExpressions = append(idExpressions, jet.String(string(id)))
+		}
+
+		pred = append(pred, table.Posts.PostProjectID.IN(idExpressions...))
+	}
+
+	if cond.CreatedTime != nil {
+		start := *cond.CreatedTime
+		end := start.AddDate(0, 1, 0) // first day of next month
+		pred = append(pred,
+			table.Posts.CreatedTime.GT_EQ(jet.Timestamp(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0)),
+			table.Posts.CreatedTime.LT(jet.Timestamp(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0)),
+		)
 	}
 
 	if len(pred) > 0 {
@@ -221,9 +268,12 @@ func (s *postService) Count(ctx context.Context, cond post.CountCond, option pos
 	return &dest[0].Count, nil
 }
 
-func (s *postService) ListPostStatsByProjectIds(ctx context.Context, projectIds ...post.ProjectID) ([]*postsvc.ListPostStatsByProjectIds, error) {
+func (s *postService) ListPostStatsByProjectIds(ctx context.Context, cond post.ListPostStatsByProjectIdsCond, projectIds ...post.ProjectID) ([]*postsvc.ListPostStatsByProjectIds, error) {
 	stmt := table.Posts.SELECT(jet.COUNT(table.Posts.PostID).AS("count"), table.Posts.PostProjectID.AS("post_project_id"), jet.MAX(table.Posts.CreatedTime).AS("last_post_time")).GROUP_BY(table.Posts.PostProjectID)
 	pred := []jet.BoolExpression{}
+	orderBy := []jet.OrderByClause{
+		jet.MAX(table.Posts.CreatedTime).DESC(),
+	}
 
 	idExpressions := make([]jet.Expression, 0, len(projectIds))
 	for _, id := range projectIds {
@@ -234,8 +284,36 @@ func (s *postService) ListPostStatsByProjectIds(ctx context.Context, projectIds 
 		pred = append(pred, table.Posts.PostProjectID.IN(idExpressions...))
 	}
 
+	if cond.CreatedTime != nil {
+		start := *cond.CreatedTime
+		end := start.AddDate(0, 1, 0) // first day of next month
+		pred = append(pred,
+			table.Posts.CreatedTime.GT_EQ(jet.Timestamp(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0)),
+			table.Posts.CreatedTime.LT(jet.Timestamp(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0)),
+		)
+	}
+
+	// switch cond.SortKey {
+	// case post.PostSortKey_CreatedTime_ASC:
+	// 	orderBy = append(orderBy, table.Posts.CreatedTime.ASC())
+	// case post.PostSortKey_CreatedTime_DESC:
+	// 	orderBy = append(orderBy, table.Posts.CreatedTime.DESC())
+	// default:
+	// 	orderBy = append(orderBy, table.Posts.CreatedTime.DESC())
+	// }
+
 	if len(pred) > 0 {
 		stmt = stmt.WHERE(jet.AND(pred...))
+	}
+
+	stmt = stmt.ORDER_BY(orderBy...)
+
+	if cond.Offset != nil {
+		stmt = stmt.OFFSET(*cond.Offset)
+	}
+
+	if cond.Size > 0 {
+		stmt = stmt.LIMIT(cond.Size)
 	}
 
 	debugSql := stmt.DebugSql()
