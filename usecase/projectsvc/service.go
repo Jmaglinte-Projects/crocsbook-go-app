@@ -120,7 +120,11 @@ func (s *service) ShowProjects(ctx context.Context, in *ShowProjectsIn) (*ShowPr
 	}
 
 	for _, entity := range entities {
-		presignedURL, err := s.projectR2Repo.Find(ctx, *entity.Thumbnail)
+		if entity.ThumbnailKey == nil {
+			continue
+		}
+
+		presignedURL, err := s.projectR2Repo.Find(ctx, *entity.ThumbnailKey)
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +154,7 @@ func (s *service) ShowProject(ctx context.Context, in *ShowProjectIn) (*ShowProj
 		return nil, errors.New("Entity not found")
 	}
 
-	presignedURL, err := s.projectR2Repo.Find(ctx, *entity.Thumbnail)
+	presignedURL, err := s.projectR2Repo.Find(ctx, *entity.ThumbnailKey)
 	if err != nil {
 		return nil, err
 	}
@@ -187,13 +191,13 @@ func (s *service) CreateProject(ctx context.Context, in *CreateProjectIn) (*Crea
 	}
 	entity.ThumbnailSet = thumbnailSet
 
-	if err = s.projectRepo.Store(ctx, entity); err != nil {
-		fmt.Println("Error storing project to mysql")
+	if err = s.projectR2Repo.Store(ctx, entity); err != nil {
+		fmt.Println("Error storing thumbnail to r2")
 		return nil, err
 	}
 
-	if err = s.projectR2Repo.Store(ctx, entity); err != nil {
-		fmt.Println("Error storing thumbnail to r2")
+	if err = s.projectRepo.Store(ctx, entity); err != nil {
+		fmt.Println("Error storing project to mysql")
 		return nil, err
 	}
 
@@ -230,13 +234,13 @@ func (s *service) UpdateProject(ctx context.Context, in *UpdateProjectIn) (*Upda
 		entity.ThumbnailSet = thumbnailSet
 
 		// thumbnail should be set after this
-		if err = s.projectR2Repo.Store(ctx, entity.Project); err != nil {
+		if err = s.projectR2Repo.Store(ctx, &entity.Project); err != nil {
 			fmt.Println("Error storing thumbnail to r2")
 			return nil, err
 		}
 	}
 
-	if err := s.projectRepo.Store(ctx, entity.Project); err != nil {
+	if err := s.projectRepo.Store(ctx, &entity.Project); err != nil {
 		return nil, err
 	}
 
@@ -257,16 +261,18 @@ func (s *service) RemoveProject(ctx context.Context, in *RemoveProjectIn) (*Remo
 		return nil, err
 	}
 
-	key := *entity.Thumbnail
-	if err := s.projectR2Repo.Remove(ctx, key); err != nil {
-		return nil, err
+	if entity.ThumbnailKey != nil {
+		key := *entity.ThumbnailKey
+		if err := s.projectR2Repo.Remove(ctx, key); err != nil {
+			return nil, err
+		}
 	}
 
 	return &RemoveProjectOut{}, nil
 }
 
 type ViewProject struct {
-	*project.Project
+	project.Project
 
 	ThumbnailURL string
 }

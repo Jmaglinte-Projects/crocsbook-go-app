@@ -11,7 +11,7 @@ type Project struct {
 	ProjectUserID  UserID
 	Name           string
 	Description    *string
-	Thumbnail      *string
+	ThumbnailKey   *string
 	Location       *string
 	Cost           *int64
 	StartDate      *time.Time

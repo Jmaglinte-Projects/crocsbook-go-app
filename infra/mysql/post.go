@@ -3,7 +3,9 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/mysql/lib/db_crocs/model"
@@ -219,6 +221,42 @@ func (s *postService) Count(ctx context.Context, cond post.CountCond, option pos
 	return &dest[0].Count, nil
 }
 
+func (s *postService) ListPostStatsByProjectIds(ctx context.Context, projectIds ...post.ProjectID) ([]*postsvc.ListPostStatsByProjectIds, error) {
+	stmt := table.Posts.SELECT(jet.COUNT(table.Posts.PostID).AS("count"), table.Posts.PostProjectID.AS("post_project_id"), jet.MAX(table.Posts.CreatedTime).AS("last_post_time")).GROUP_BY(table.Posts.PostProjectID)
+	pred := []jet.BoolExpression{}
+
+	idExpressions := make([]jet.Expression, 0, len(projectIds))
+	for _, id := range projectIds {
+		idExpressions = append(idExpressions, jet.String(string(id)))
+	}
+
+	if len(projectIds) > 0 {
+		pred = append(pred, table.Posts.PostProjectID.IN(idExpressions...))
+	}
+
+	if len(pred) > 0 {
+		stmt = stmt.WHERE(jet.AND(pred...))
+	}
+
+	debugSql := stmt.DebugSql()
+	fmt.Println("--------------------------------")
+	fmt.Println(debugSql)
+	fmt.Println("--------------------------------")
+
+	dest := &CountTotalPostsByProjectIdModel{}
+	err := stmt.Query(s.db, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	out := dest.Format()
+
+	jsonText, _ := json.MarshalIndent(dest, "", "\t")
+	fmt.Println(string(jsonText))
+
+	return out, nil
+}
+
 type PostModels []struct {
 	model.Posts
 }
@@ -238,6 +276,24 @@ func (src PostModels) ViewPost() []*postsvc.ViewPost {
 			Post: *postEntity,
 		}
 		out = append(out, vw)
+	}
+	return out
+}
+
+type CountTotalPostsByProjectIdModel []struct {
+	PostProjectID string
+	Count         uint64
+	LastPostTime  time.Time
+}
+
+func (src CountTotalPostsByProjectIdModel) Format() []*postsvc.ListPostStatsByProjectIds {
+	out := make([]*postsvc.ListPostStatsByProjectIds, 0, len(src))
+	for _, item := range src {
+		out = append(out, &postsvc.ListPostStatsByProjectIds{
+			ProjectID:    post.ProjectID(item.PostProjectID),
+			Count:        item.Count,
+			LastPostTime: item.LastPostTime,
+		})
 	}
 	return out
 }

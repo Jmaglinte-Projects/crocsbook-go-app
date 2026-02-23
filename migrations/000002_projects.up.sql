@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS projects (
 
   name VARCHAR(200) NOT NULL,
   description TEXT,
-  thumbnail TEXT,
+  thumnail_key TEXT,
   location VARCHAR(200),
   cost BIGINT,
   start_date DATE,

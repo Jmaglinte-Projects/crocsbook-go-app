@@ -30,7 +30,7 @@ func (s *projectServer) ShowProjects(ctx context.Context, req *pb.ShowProjectsIn
 	}
 
 	out := pb.ShowProjectsOut{
-		Items: make([]*pb.ViewProject, len(projects.Items)),
+		Items: make([]*pb.ViewProject, 0, len(projects.Items)),
 	}
 
 	for _, project := range projects.Items {
@@ -80,6 +80,10 @@ func (s *projectServer) CreateProject(ctx context.Context, req *pb.CreateProject
 		StartDate:        &startDate,
 		CompletionDate:   &completionDate,
 	}
+
+	fmt.Println("--------------------------------")
+	fmt.Println("in.ThumbnailContent: ", in.ThumbnailContent)
+	fmt.Println("--------------------------------")
 
 	_, err := s.svc.CreateProject(ctx, &in)
 	if err != nil {
@@ -142,8 +146,8 @@ func (dest *VieWProject) UnmarshalOriginal(src *projectsvc.ViewProject) {
 		d.Description = *src.Description
 	}
 
-	if src.Thumbnail != nil {
-		d.Thumbnail = *src.Thumbnail
+	if src.ThumbnailKey != nil {
+		d.ThumbnailKey = *src.ThumbnailKey
 	}
 
 	if src.Location != nil {

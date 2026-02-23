@@ -2,6 +2,8 @@ package mysql_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -125,5 +127,25 @@ func TestPostService_Count(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = mysql.PrettyPrint(count)
+	assert.NoError(t, err)
+}
+
+func TestPostService_ListPostStatsByProjectIds(t *testing.T) {
+	db := mysql.SetupTestDB(t)
+
+	service := mysql.NewPostService(db)
+
+	ctx := context.Background()
+
+	projectIds := []post.ProjectID{post.ProjectID("ac13a9cc-0f77-11f1-826f-8abfd21201dc")}
+
+	out, err := service.ListPostStatsByProjectIds(ctx, projectIds...)
+	assert.NoError(t, err)
+	assert.NotNil(t, out)
+
+	b, _ := json.MarshalIndent(out, "", "  ")
+	fmt.Println("dest:", string(b))
+
+	err = mysql.PrettyPrint(out)
 	assert.NoError(t, err)
 }

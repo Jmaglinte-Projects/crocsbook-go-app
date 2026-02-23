@@ -2,10 +2,10 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
 	pb "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/lib"
-	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/mediasvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/postsvc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -30,18 +30,14 @@ func (s *postServer) ShowPosts(ctx context.Context, req *pb.ShowPostsIn) (*pb.Sh
 	}
 
 	out := pb.ShowPostsOut{
-		Items: make([]*pb.ViewPost, 0, len(posts.Items)),
+		Items: make([]*pb.Post, 0, len(posts.Items)),
 		Total: posts.Total,
 	}
-	for _, post := range posts.Items {
-		item := &ViewPost{}
-		item.UnmarshalOriginal(post)
-		for _, media := range post.MediaList {
-			mediaItem := &ViewPostMedia{}
-			mediaItem.UnmarshalOriginal(media)
-			item.MediaList = append(item.MediaList, &mediaItem.ViewPostMedia)
-		}
-		out.Items = append(out.Items, &item.ViewPost)
+
+	for _, p := range posts.Items {
+		item := &Post{}
+		item.UnmarshalOriginal(p)
+		out.Items = append(out.Items, &item.Post)
 	}
 
 	return &pb.ShowPostsOut{Items: out.Items, Total: out.Total}, nil
@@ -57,20 +53,11 @@ func (s *postServer) ShowPost(ctx context.Context, req *pb.ShowPostIn) (*pb.Show
 		return nil, err
 	}
 
-	out := pb.ShowPostOut{
-		Item: &pb.ViewPost{
-			MediaList: make([]*pb.ViewPostMedia, len(post.Item.MediaList)),
-		},
-	}
-	item := &ViewPost{}
+	item := &Post{}
 	item.UnmarshalOriginal(post.Item)
-	out.Item = &item.ViewPost
-	for _, media := range post.Item.MediaList {
-		item := &ViewPostMedia{}
-		item.UnmarshalOriginal(media)
-		out.Item.MediaList = append(out.Item.MediaList, &item.ViewPostMedia)
+	out := pb.ShowPostOut{
+		Item: &item.Post,
 	}
-
 	return &out, nil
 }
 
@@ -119,41 +106,70 @@ func (s *postServer) RemovePost(ctx context.Context, req *pb.RemovePostIn) (*pb.
 	return &pb.RemovePostOut{}, nil
 }
 
-type ViewPost struct {
-	pb.ViewPost
+type Post struct {
+	pb.Post
 }
 
-func (dest *ViewPost) UnmarshalOriginal(src *postsvc.ViewPost) {
-	if dest.Post == nil {
-		dest.Post = &pb.Post{}
+func (dest *Post) UnmarshalOriginal(src *postsvc.ViewPost) {
+	dest.PostId = string(src.PostID)
+	dest.PostProjectId = string(src.PostProjectID)
+	if src.Content != nil {
+		dest.Content = *src.Content
 	}
-	d := dest.Post
-
-	d.PostId = string(src.PostID)
-	d.PostProjectId = string(src.PostProjectID)
-	d.Content = strPtr(src.Content)
-	d.Visibility = postVisibilityToProto(*src.Visibility)
-	d.CreatedTime = timestamppb.New(src.CreatedTime)
-	d.UpdatedTime = timePtrToProto(src.UpdatedTime)
-}
-
-type ViewPostMedia struct {
-	pb.ViewPostMedia
-}
-
-func (dest *ViewPostMedia) UnmarshalOriginal(src *mediasvc.ViewMedia) {
-	if dest.Media == nil {
-		dest.Media = &pb.PostMedia{}
+	if src.Visibility != nil {
+		dest.Visibility = postVisibilityToProto(*src.Visibility)
 	}
-	d := dest.Media
+	dest.CreatedTime = timestamppb.New(src.CreatedTime)
+	if src.UpdatedTime != nil {
+		dest.UpdatedTime = timestamppb.New(*src.UpdatedTime)
+	}
 
-	d.MediaId = string(src.MediaID)
-	d.MediaPostId = string(src.MediaPostID)
-	d.ObjectKey = src.ObjectKey
-	d.Type = string(src.Type)
-	d.CreatedTime = timestamppb.New(src.CreatedTime)
+	dest.PostCount = src.PostCount
+	dest.LastPostTime = timestamppb.New(src.LastPostTime)
 
-	dest.PresignedUrl = src.PresignedURL
+	if src.Project != nil {
+		fmt.Println("src.Project:", src.Project.ProjectID)
+		dest.Project = &pb.Post_Project{}
+		dest.Project.ProjectId = string(src.Project.ProjectID)
+		dest.Project.ProjectUserId = string(src.Project.ProjectUserID)
+		dest.Project.Name = src.Project.Name
+		if src.Project.Description != nil {
+			dest.Project.Description = *src.Project.Description
+		}
+		if src.Project.ThumbnailKey != nil {
+			dest.Project.ThumbnailKey = *src.Project.ThumbnailKey
+		}
+		if src.Project.Location != nil {
+			dest.Project.Location = *src.Project.Location
+		}
+		if src.Project.Cost != nil {
+			dest.Project.Cost = *src.Project.Cost
+		}
+		if src.Project.StartDate != nil {
+			dest.Project.StartDate = timestamppb.New(*src.Project.StartDate)
+		}
+		if src.Project.CompletionDate != nil {
+			dest.Project.CompletionDate = timestamppb.New(*src.Project.CompletionDate)
+		}
+		dest.Project.CreatedTime = timestamppb.New(src.Project.CreatedTime)
+		if src.Project.UpdatedTime != nil {
+			dest.Project.UpdatedTime = timestamppb.New(*src.Project.UpdatedTime)
+		}
+		dest.Project.ThumbnailUrl = src.Project.ThumbnailURL
+	}
+	if src.MediaList != nil {
+		dest.MediaList = make([]*pb.Post_Media, 0, len(src.MediaList))
+		for _, m := range src.MediaList {
+			dest.MediaList = append(dest.MediaList, &pb.Post_Media{
+				MediaId:      string(m.MediaID),
+				MediaPostId:  string(m.MediaPostID),
+				ObjectKey:    m.ObjectKey,
+				Type:         string(m.Type),
+				CreatedTime:  timestamppb.New(m.CreatedTime),
+				ThumbnailUrl: m.PresignedURL,
+			})
+		}
+	}
 }
 
 func postVisibilityToProto(v post.Visibility) pb.PostVisibility {

@@ -21,7 +21,7 @@ type projectsTable struct {
 	ProjectUserID  mysql.ColumnString
 	Name           mysql.ColumnString
 	Description    mysql.ColumnString
-	Thumbnail      mysql.ColumnString
+	ThumbnailKey   mysql.ColumnString
 	Location       mysql.ColumnString
 	Cost           mysql.ColumnInteger
 	StartDate      mysql.ColumnDate
@@ -73,15 +73,15 @@ func newProjectsTableImpl(schemaName, tableName, alias string) projectsTable {
 		ProjectUserIDColumn  = mysql.StringColumn("project_user_id")
 		NameColumn           = mysql.StringColumn("name")
 		DescriptionColumn    = mysql.StringColumn("description")
-		ThumbnailColumn      = mysql.StringColumn("thumbnail")
+		ThumbnailKeyColumn   = mysql.StringColumn("thumbnail_key")
 		LocationColumn       = mysql.StringColumn("location")
 		CostColumn           = mysql.IntegerColumn("cost")
 		StartDateColumn      = mysql.DateColumn("start_date")
 		CompletionDateColumn = mysql.DateColumn("completion_date")
 		CreatedTimeColumn    = mysql.TimestampColumn("created_time")
 		UpdatedTimeColumn    = mysql.TimestampColumn("updated_time")
-		allColumns           = mysql.ColumnList{ProjectIDColumn, ProjectUserIDColumn, NameColumn, DescriptionColumn, ThumbnailColumn, LocationColumn, CostColumn, StartDateColumn, CompletionDateColumn, CreatedTimeColumn, UpdatedTimeColumn}
-		mutableColumns       = mysql.ColumnList{NameColumn, DescriptionColumn, ThumbnailColumn, LocationColumn, CostColumn, StartDateColumn, CompletionDateColumn, CreatedTimeColumn, UpdatedTimeColumn}
+		allColumns           = mysql.ColumnList{ProjectIDColumn, ProjectUserIDColumn, NameColumn, DescriptionColumn, ThumbnailKeyColumn, LocationColumn, CostColumn, StartDateColumn, CompletionDateColumn, CreatedTimeColumn, UpdatedTimeColumn}
+		mutableColumns       = mysql.ColumnList{NameColumn, DescriptionColumn, ThumbnailKeyColumn, LocationColumn, CostColumn, StartDateColumn, CompletionDateColumn, CreatedTimeColumn, UpdatedTimeColumn}
 		defaultColumns       = mysql.ColumnList{CreatedTimeColumn}
 	)
 
@@ -93,7 +93,7 @@ func newProjectsTableImpl(schemaName, tableName, alias string) projectsTable {
 		ProjectUserID:  ProjectUserIDColumn,
 		Name:           NameColumn,
 		Description:    DescriptionColumn,
-		Thumbnail:      ThumbnailColumn,
+		ThumbnailKey:   ThumbnailKeyColumn,
 		Location:       LocationColumn,
 		Cost:           CostColumn,
 		StartDate:      StartDateColumn,

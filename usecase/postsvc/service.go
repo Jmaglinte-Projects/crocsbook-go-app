@@ -2,12 +2,16 @@ package postsvc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/media"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/mediasvc"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/projectsvc"
 	"github.com/gabriel-vasile/mimetype"
 )
 
@@ -20,6 +24,7 @@ type PostRepository interface {
 type PostService interface {
 	List(ctx context.Context, cond post.ListCond, option ListOption) ([]*ViewPost, error)
 	Count(ctx context.Context, cond post.CountCond, option CountOption) (*uint64, error)
+	ListPostStatsByProjectIds(ctx context.Context, projectId ...post.ProjectID) ([]*ListPostStatsByProjectIds, error)
 }
 
 type ListOption struct {
@@ -83,18 +88,22 @@ type RemovePostIn struct {
 type RemovePostOut struct{}
 
 type service struct {
-	postRepo  PostRepository
-	postSvc   PostService
-	mediaRepo mediasvc.MediaRepository
-	mediaSvc  mediasvc.MediaService
+	postRepo      PostRepository
+	postSvc       PostService
+	mediaRepo     mediasvc.MediaRepository
+	mediaSvc      mediasvc.MediaService
+	projectSvc    projectsvc.ProjectService
+	projectR2Repo projectsvc.ProjectR2Repository
 }
 
-func NewService(postRepo PostRepository, postSvc PostService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService) Service {
+func NewService(postRepo PostRepository, postSvc PostService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService, projectSvc projectsvc.ProjectService, projectR2Repo projectsvc.ProjectR2Repository) Service {
 	return &service{
-		postRepo:  postRepo,
-		postSvc:   postSvc,
-		mediaRepo: mediaRepo,
-		mediaSvc:  mediaSvc,
+		postRepo:      postRepo,
+		postSvc:       postSvc,
+		mediaRepo:     mediaRepo,
+		mediaSvc:      mediaSvc,
+		projectSvc:    projectSvc,
+		projectR2Repo: projectR2Repo,
 	}
 }
 
@@ -106,20 +115,20 @@ func (s *service) ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut
 		return nil, err
 	}
 
-	for _, entity := range entities {
-		postID := media.PostID(entity.PostID)
-		mediaCond := &media.ListCond{
-			MediaPostID: &postID,
-		}
-
-		mediaOpt := &mediasvc.ListOption{}
-		mediaList, err := s.mediaSvc.List(ctx, *mediaCond, *mediaOpt)
-		if err != nil {
-			return nil, err
-		}
-
-		entity.MediaList = append(entity.MediaList, mediaList...)
+	if err := s.setProject(ctx, entities...); err != nil {
+		return nil, err
 	}
+
+	if err := s.setMedia(ctx, entities...); err != nil {
+		return nil, err
+	}
+
+	if err := s.setPostStatsByProjectIds(ctx, entities...); err != nil {
+		return nil, err
+	}
+
+	// b, _ := json.MarshalIndent(entities, "", "  ")
+	// fmt.Println("entities:", string(b))
 
 	countCond := &post.CountCond{}
 	countOpt := &CountOption{}
@@ -144,18 +153,16 @@ func (s *service) ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, e
 		return nil, errors.New("Entity not found")
 	}
 
-	postID := media.PostID(entity.PostID)
-	mediaCond := &media.ListCond{
-		MediaPostID: &postID,
-	}
-
-	mediaOpt := &mediasvc.ListOption{}
-	mediaList, err := s.mediaSvc.List(ctx, *mediaCond, *mediaOpt)
-	if err != nil {
+	if err := s.setMedia(ctx, entity); err != nil {
 		return nil, err
 	}
 
-	entity.MediaList = mediaList
+	if err := s.setProject(ctx, entity); err != nil {
+		return nil, err
+	}
+
+	b, _ := json.MarshalIndent(entity.Project, "", "  ")
+	fmt.Println("entity.Project:", string(b))
 
 	return &ShowPostOut{
 		Item: entity,
@@ -265,15 +272,114 @@ func (s *service) createMedia(ctx context.Context, in *mediasvc.CreateMediaIn) (
 	return &mediasvc.CreateMediaOut{}, nil
 }
 
+func (s *service) setMedia(ctx context.Context, entities ...*ViewPost) error {
+	for _, entity := range entities {
+		postID := media.PostID(entity.PostID)
+		mediaCond := &media.ListCond{
+			MediaPostID: &postID,
+		}
+
+		mediaOpt := &mediasvc.ListOption{}
+		mediaList, err := s.mediaSvc.List(ctx, *mediaCond, *mediaOpt)
+		if err != nil {
+			fmt.Println("Error listing media")
+			return err
+		}
+
+		entity.MediaList = append(entity.MediaList, mediaList...)
+	}
+	return nil
+}
+
+func (s *service) setProject(ctx context.Context, entities ...*ViewPost) error {
+	projectIDs := []project.ProjectID{}
+	for _, entity := range entities {
+		projectIDs = append(projectIDs, project.ProjectID(entity.PostProjectID))
+	}
+
+	projectCond := &project.ListCond{
+		ProjectIDs: projectIDs,
+	}
+	projectOpt := &projectsvc.ListOption{}
+	projects, err := s.projectSvc.List(ctx, *projectCond, *projectOpt)
+	if err != nil {
+		fmt.Println("Error listing projects")
+		return err
+	}
+
+	projectByID := make(map[project.ProjectID]*projectsvc.ViewProject)
+	for _, p := range projects {
+		projectByID[p.ProjectID] = p
+	}
+	for _, entity := range entities {
+		if p, ok := projectByID[project.ProjectID(entity.PostProjectID)]; ok {
+			presignedURL := ""
+			if p.ThumbnailKey != nil {
+				if u, err := s.projectR2Repo.Find(ctx, *p.ThumbnailKey); err == nil {
+					presignedURL = u
+				}
+			}
+			entity.Project = &ViewProject{
+				Project:      p.Project,
+				ThumbnailURL: presignedURL,
+			}
+		}
+	}
+	return nil
+}
+
+func (s *service) setPostStatsByProjectIds(ctx context.Context, entities ...*ViewPost) error {
+	projectIDs := []post.ProjectID{}
+	for _, entity := range entities {
+		projectIDs = append(projectIDs, post.ProjectID(entity.PostProjectID))
+	}
+
+	out, err := s.postSvc.ListPostStatsByProjectIds(ctx, projectIDs...)
+	if err != nil {
+		fmt.Println("Error counting total posts by project ID")
+		return err
+	}
+
+	projectByID := make(map[project.ProjectID]*ListPostStatsByProjectIds)
+	for _, p := range out {
+		projectByID[project.ProjectID(p.ProjectID)] = p
+	}
+
+	for _, entity := range entities {
+		if p, ok := projectByID[project.ProjectID(entity.PostProjectID)]; ok {
+			entity.PostCount = p.Count
+			entity.LastPostTime = p.LastPostTime
+		}
+	}
+
+	return nil
+}
+
 type ViewPost struct {
 	post.Post
-	// linked other domain here whenever you need them
 
-	MediaList []*mediasvc.ViewMedia
+	// linked other domain here whenever you need them
+	MediaList []*mediasvc.ViewMedia // it should be under postsvc not on mediasvc refactor this later
+	Project   *ViewProject
+
+	PostCount    uint64
+	LastPostTime time.Time
 }
 
 type MediaImage struct {
 	Filename    string
 	ContentType string
 	Content     []byte
+}
+
+type ViewProject struct {
+	project.Project
+
+	ThumbnailURL string
+}
+
+type ListPostStatsByProjectIds struct {
+	ProjectID    post.ProjectID
+	Count        uint64
+	LastPostTime time.Time
 }

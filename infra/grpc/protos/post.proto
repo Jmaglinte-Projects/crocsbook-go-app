@@ -16,7 +16,7 @@ service PostService {
 
 message ShowPostsIn {}
 message ShowPostsOut {
-  repeated ViewPost items = 1;
+  repeated Post items = 1;
   uint64 total = 2;
 }
 
@@ -24,7 +24,7 @@ message ShowPostIn {
   string post_id = 1;
 }
 message ShowPostOut {
-  ViewPost item = 1;
+  Post item = 1;
 }
 
 message CreatePostIn {
@@ -52,11 +52,9 @@ message RemovePostIn {
 }
 message RemovePostOut {}
 
-message ViewPost {
-  Post post = 1;
-
-  repeated ViewPostMedia media_list = 2;
-}
+// message ViewPost {
+//   Post post = 1;
+// }
 
 message Post {
   string post_id = 1;
@@ -65,23 +63,37 @@ message Post {
   PostVisibility visibility = 4;
   google.protobuf.Timestamp created_time = 5;
   google.protobuf.Timestamp updated_time = 6;
+  Post_Project project = 7;
+  repeated Post_Media media_list = 8;
+
+  uint64 post_count = 9;  
+	google.protobuf.Timestamp last_post_time = 10;
+}
+ 
+message Post_Project {
+  string project_id = 1;
+  string project_user_id = 2;
+  string name = 3;
+  string description = 4;
+  string thumbnail_key = 5;
+  string location = 6;
+  int64 cost = 7;
+  google.protobuf.Timestamp start_date = 8;
+  google.protobuf.Timestamp completion_date = 9;
+  google.protobuf.Timestamp created_time = 10;
+  google.protobuf.Timestamp updated_time = 11;
+  string thumbnail_url = 12;
 }
 
-
-message ViewPostMedia {
-  PostMedia media = 1;
-
-  string presigned_url = 2;
-}
-
-message PostMedia {
+message Post_Media {
   string media_id = 1;
   string media_post_id = 2;
   string object_key = 3;
   string type = 4;
   google.protobuf.Timestamp created_time = 5;
-}
 
+  string thumbnail_url = 6;
+}
 
 enum PostVisibility {
   PostVisibility_UNSPECIFIED = 0;

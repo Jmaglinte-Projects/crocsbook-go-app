@@ -20,7 +20,7 @@ func TestMediaRepository_Find(t *testing.T) {
 
 	ctx := context.Background()
 
-	id := media.MediaID("887a2752-9911-11f0-afd3-8abfd21201dc")
+	id := media.MediaID("81783e14-0f7f-11f1-826f-8abfd21201dc")
 
 	entity, err := repo.Find(ctx, id)
 	err = mysql.PrettyPrint(entity)
@@ -28,7 +28,6 @@ func TestMediaRepository_Find(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, entity)
 	assert.Equal(t, id, entity.MediaID)
-
 }
 
 func TestMediaRepository_Store(t *testing.T) {

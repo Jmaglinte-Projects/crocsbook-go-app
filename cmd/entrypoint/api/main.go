@@ -93,7 +93,7 @@ func main() {
 	)
 	{
 		mediaUcSvc = mediasvc.NewService(mediaRepo, mediaSvc)
-		postUcSvc = postsvc.NewService(postRepo, postSvc, mediaRepo, mediaSvc)
+		postUcSvc = postsvc.NewService(postRepo, postSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo)
 		projectUcSvc = projectsvc.NewService(projectRepo, projectSvc, projectR2Repo)
 		userUcSvc = usersvc.NewService(userRepo, userSvc)
 	}

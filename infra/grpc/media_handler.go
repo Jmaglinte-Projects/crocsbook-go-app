@@ -106,6 +106,7 @@ func (dest *ViewMedia) UnmarshalOriginal(src *mediasvc.ViewMedia) {
 	if dest.Media == nil {
 		dest.Media = &pb.Media{}
 	}
+
 	d := dest.Media
 
 	d.MediaId = string(src.MediaID)

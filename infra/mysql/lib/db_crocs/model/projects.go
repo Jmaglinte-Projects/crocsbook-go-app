@@ -16,7 +16,7 @@ type Projects struct {
 	ProjectUserID  string `sql:"primary_key"`
 	Name           string
 	Description    *string
-	Thumbnail      *string
+	ThumbnailKey   *string
 	Location       *string
 	Cost           *int64
 	StartDate      *time.Time

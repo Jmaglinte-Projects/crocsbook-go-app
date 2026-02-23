@@ -76,7 +76,7 @@ func (r *projectR2Repository) Store(ctx context.Context, entity *project.Project
 		return err
 	}
 
-	entity.Thumbnail = &key
+	entity.ThumbnailKey = &key
 
 	return nil
 }

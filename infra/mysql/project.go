@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/mysql/lib/db_crocs/model"
@@ -33,10 +34,12 @@ func (r *ProjectRepository) Find(ctx context.Context, id project.ProjectID) (*pr
 		return nil, err
 	}
 
-	debugSql := stmt.DebugSql()
-	fmt.Println("--------------------------------")
-	fmt.Println(debugSql)
-	fmt.Println("--------------------------------")
+	if os.Getenv("MYSQL_LOGGING_ENABLED") == "true" {
+		debugSql := stmt.DebugSql()
+		fmt.Println("--------------------------------")
+		fmt.Println(debugSql)
+		fmt.Println("--------------------------------")
+	}
 
 	if len(*dest) == 0 {
 		return nil, nil
@@ -53,7 +56,7 @@ func (r *ProjectRepository) Store(ctx context.Context, entity *project.Project) 
 		ProjectUserID:  string(entity.ProjectUserID),
 		Name:           entity.Name,
 		Description:    entity.Description,
-		Thumbnail:      entity.Thumbnail,
+		ThumbnailKey:   entity.ThumbnailKey,
 		Location:       entity.Location,
 		Cost:           entity.Cost,
 		StartDate:      entity.StartDate,
@@ -162,9 +165,11 @@ func (s *ProjectService) List(ctx context.Context, cond project.ListCond, option
 	}
 
 	debugSql := stmt.DebugSql()
-	fmt.Println("--------------------------------")
-	fmt.Println(debugSql)
-	fmt.Println("--------------------------------")
+	if os.Getenv("MYSQL_LOGGING_ENABLED") == "true" {
+		fmt.Println("--------------------------------")
+		fmt.Println(debugSql)
+		fmt.Println("--------------------------------")
+	}
 
 	dest := &ProjectModels{}
 	err := stmt.Query(s.db, dest)
@@ -205,9 +210,11 @@ func (s *ProjectService) Count(ctx context.Context, cond project.CountCond, opti
 	}
 
 	debugSql := stmt.DebugSql()
-	fmt.Println("--------------------------------")
-	fmt.Println(debugSql)
-	fmt.Println("--------------------------------")
+	if os.Getenv("MYSQL_LOGGING_ENABLED") == "true" {
+		fmt.Println("--------------------------------")
+		fmt.Println(debugSql)
+		fmt.Println("--------------------------------")
+	}
 
 	var dest []struct {
 		// TIP if there are weird error this was changed from uint32 to uint64
@@ -234,7 +241,7 @@ func (src ProjectModels) ViewProject() []*projectsvc.ViewProject {
 		entity.ProjectUserID = project.UserID(item.ProjectUserID)
 		entity.Name = item.Name
 		entity.Description = item.Description
-		entity.Thumbnail = item.Thumbnail
+		entity.ThumbnailKey = item.ThumbnailKey
 		entity.Location = item.Location
 		entity.Cost = item.Cost
 		entity.StartDate = item.StartDate
@@ -243,7 +250,7 @@ func (src ProjectModels) ViewProject() []*projectsvc.ViewProject {
 		entity.UpdatedTime = item.UpdatedTime
 
 		vw := &projectsvc.ViewProject{
-			Project: entity,
+			Project: *entity,
 		}
 		out = append(out, vw)
 	}

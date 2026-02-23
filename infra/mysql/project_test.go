@@ -59,7 +59,7 @@ func TestProjectRepository_Store(t *testing.T) {
 		ProjectUserID:  project.UserID(userEntity.UserID),
 		Name:           "Bulacan",
 		Description:    nil,
-		Thumbnail:      nil,
+		ThumbnailKey:   nil,
 		Location:       nil,
 		Cost:           &cost,
 		StartDate:      &now,

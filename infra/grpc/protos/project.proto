@@ -31,7 +31,6 @@ message CreateProjectIn {
   string project_user_id = 1;
   string name = 2;
   string description = 3;
-  string thumbnail = 4;
   string location = 5;
   int64 cost = 6;
   google.protobuf.Timestamp start_date = 7;
@@ -46,7 +45,6 @@ message UpdateProjectIn {
 
   string name = 2;
   string description = 3;
-  string thumbnail = 4;
   string location = 5;
   int64 cost = 6;
   google.protobuf.Timestamp start_date = 8;
@@ -72,7 +70,7 @@ message Project {
   string project_user_id = 2;
   string name = 3;
   string description = 4;
-  string thumbnail = 5;
+  string thumbnail_key = 5;
   string location = 6;
   int64 cost = 7;
   google.protobuf.Timestamp start_date = 8;
@@ -80,4 +78,3 @@ message Project {
   google.protobuf.Timestamp created_time = 10;
   google.protobuf.Timestamp updated_time = 11;
 }
-

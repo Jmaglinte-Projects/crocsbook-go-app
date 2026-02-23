@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DSN = "root:super-secret-password@tcp(localhost:3369)/db_crocs?loc=Local&parseTime=true"
+	DSN = "root:@dm1n1234@tcp(localhost:3306)/db_crocs?loc=Local&parseTime=true"
 )
 
 func SetupTestDB(t *testing.T) *sql.DB {
