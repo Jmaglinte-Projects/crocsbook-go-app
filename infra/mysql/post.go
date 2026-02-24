@@ -153,11 +153,16 @@ func (s *postService) List(ctx context.Context, cond post.ListCond) ([]*postsvc.
 	}
 
 	if cond.CreatedTime != nil {
+		/* Example query:
+		AND (posts.created_time >= TIMESTAMP('2026-02-01 00:00:00'))
+		AND (posts.created_time < TIMESTAMP('2026-03-01 00:00:00'))
+		*/
 		start := *cond.CreatedTime
-		end := start.AddDate(0, 1, 0) // first day of next month
+		firstOfMonth := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
+		firstOfNextMonth := firstOfMonth.AddDate(0, 1, 0)
 		pred = append(pred,
-			table.Posts.CreatedTime.GT_EQ(jet.Timestamp(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0)),
-			table.Posts.CreatedTime.LT(jet.Timestamp(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0)),
+			table.Posts.CreatedTime.GT_EQ(jet.Timestamp(firstOfMonth.Year(), firstOfMonth.Month(), firstOfMonth.Day(), 0, 0, 0, 0)),
+			table.Posts.CreatedTime.LT(jet.Timestamp(firstOfNextMonth.Year(), firstOfNextMonth.Month(), firstOfNextMonth.Day(), 0, 0, 0, 0)),
 		)
 	}
 
@@ -286,10 +291,11 @@ func (s *postService) ListPostStatsByProjectIds(ctx context.Context, cond post.L
 
 	if cond.CreatedTime != nil {
 		start := *cond.CreatedTime
-		end := start.AddDate(0, 1, 0) // first day of next month
+		firstOfMonth := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
+		firstOfNextMonth := firstOfMonth.AddDate(0, 1, 0)
 		pred = append(pred,
-			table.Posts.CreatedTime.GT_EQ(jet.Timestamp(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0)),
-			table.Posts.CreatedTime.LT(jet.Timestamp(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0)),
+			table.Posts.CreatedTime.GT_EQ(jet.Timestamp(firstOfMonth.Year(), firstOfMonth.Month(), firstOfMonth.Day(), 0, 0, 0, 0)),
+			table.Posts.CreatedTime.LT(jet.Timestamp(firstOfNextMonth.Year(), firstOfNextMonth.Month(), firstOfNextMonth.Day(), 0, 0, 0, 0)),
 		)
 	}
 

@@ -121,7 +121,7 @@ func (s *postServer) ShowPostByProjectId(ctx context.Context, req *pb.ShowPostBy
 	filter.Marshal(req.Filter)
 	filterSvc := postsvc.Filter(*filter)
 
-	// b, _ := json.MarshalIndent(postFilter, "", "  ")
+	// b, _ := json.MarshalIndent(filter, "", "  ")
 	// fmt.Println("postFilter:", string(b))
 
 	in := &postsvc.ShowPostByProjectIdIn{
@@ -245,7 +245,7 @@ func (dest *PostFilter) Marshal(src *pb.PostFilter) {
 
 	dest.SortKey = post.PostSortKey(src.SortKey)
 	dest.Size = src.Size
-	dest.Offset = &src.Offset
+	dest.Offset = src.Offset
 }
 
 // func rpcPostMediaImageToSvcMediaImage(src *pb.MediaImage) *postsvc.MediaImage {

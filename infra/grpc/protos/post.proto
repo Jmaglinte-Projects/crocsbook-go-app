@@ -17,7 +17,7 @@ service PostService {
 }
 
 message ShowPostsIn {
-  PostFilter filter = 1;
+  optional PostFilter filter = 1;
 }
 message ShowPostsOut {
   repeated Post items = 1;
@@ -60,7 +60,7 @@ message RemovePostOut {}
 message ShowPostByProjectIdIn {
   string project_id = 1;
 
-  PostFilter filter = 2;
+  optional PostFilter filter = 2;
 }
 message ShowPostByProjectIdOut {
   repeated Post items = 1;
@@ -68,17 +68,16 @@ message ShowPostByProjectIdOut {
 }
 
 message PostFilter {
-  google.protobuf.Timestamp created_time = 1;
+  optional google.protobuf.Timestamp created_time = 1;
 
   PostSortKey sort_key = 2;
   int64 size = 3;
-  int64 offset = 4;
+  optional int64 offset = 4;
 }
 
 enum PostSortKey {
-  PostSortKey_UNSPECIFIED = 0;
-  PostSortKey_CreatedTime_ASC = 1;
-  PostSortKey_CreatedTime_DESC = 2;
+  PostSortKey_CreatedTime_ASC = 0;
+  PostSortKey_CreatedTime_DESC = 1;
 }
 
 message Post {
