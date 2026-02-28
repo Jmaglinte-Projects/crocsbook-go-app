@@ -112,6 +112,99 @@ func (r *ProjectRepository) Remove(ctx context.Context, ids ...project.ProjectID
 	return nil
 }
 
+type projectLikeRepository struct {
+	db *sql.DB
+}
+
+func NewProjectLikeRepository(db *sql.DB) projectsvc.ProjectLikeRepository {
+	return &projectLikeRepository{
+		db: db,
+	}
+}
+
+func (r *projectLikeRepository) Find(ctx context.Context, projectID project.ProjectID) (*project.ProjectLike, error) {
+	stmt := table.ProjectLikes.SELECT(table.ProjectLikes.AllColumns).WHERE(
+		table.ProjectLikes.ProjectID.EQ(jet.String(string(projectID))),
+	)
+
+	dest := &ProjectLikeModels{}
+	err := stmt.Query(r.db, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	debugSql := stmt.DebugSql()
+	fmt.Println("-------------projectLikeRepository) Find-------------------")
+	fmt.Println(debugSql)
+	fmt.Println("--------------------------------")
+
+	if len(*dest) == 0 {
+		return nil, nil
+	}
+
+	out := dest.Unmarshal()
+
+	return out[0], nil
+}
+
+func (r *projectLikeRepository) Store(ctx context.Context, entity *project.ProjectLike) error {
+	model := model.ProjectLikes{
+		ProjectID:     string(entity.ProjectID),
+		ProjectUserID: string(entity.UserID),
+		CreatedTime:   entity.CreatedTime,
+	}
+
+	insertStmt := table.ProjectLikes.INSERT(table.ProjectLikes.AllColumns).MODEL(model)
+
+	updateStmt := table.ProjectLikes.UPDATE(table.ProjectLikes.AllColumns).MODEL(model)
+	updateStmt = updateStmt.WHERE(jet.AND(table.ProjectLikes.ProjectID.EQ(jet.String(string(entity.ProjectID))),
+		table.ProjectLikes.ProjectUserID.EQ(jet.String(string(entity.UserID)))))
+
+	_, err := insertStmt.Exec(r.db)
+	if err != nil {
+		if mysqlerr, ok := err.(*mysql.MySQLError); ok {
+			switch mysqlerr.Number {
+			case 1062:
+				result, err := updateStmt.Exec(r.db)
+				if err != nil {
+					return err
+				}
+				rowsAffected, err := result.RowsAffected()
+				if err != nil {
+					return err
+				}
+				if rowsAffected == 0 {
+					return fmt.Errorf("entity version conflicted")
+				}
+			default:
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *projectLikeRepository) Remove(ctx context.Context, ids ...projectsvc.RemoveCond) error {
+	idExpressions := make([]jet.Expression, 0, len(ids))
+	userIDExpressions := make([]jet.Expression, 0, len(ids))
+	for _, cond := range ids {
+		idExpressions = append(idExpressions, jet.String(string(cond.ProjectID)))
+		userIDExpressions = append(userIDExpressions, jet.String(string(cond.UserID)))
+	}
+
+	stmt := table.ProjectLikes.DELETE().WHERE(jet.AND(table.ProjectLikes.ProjectID.IN(idExpressions...), table.ProjectLikes.ProjectUserID.IN(userIDExpressions...)))
+
+	_, err := stmt.Exec(r.db)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type ProjectService struct {
 	db *sql.DB
 }
@@ -255,4 +348,27 @@ func (src ProjectModels) ViewProject() []*projectsvc.ViewProject {
 		out = append(out, vw)
 	}
 	return out
+}
+
+type ProjectLikeModels []struct {
+	ProjectLikes
+}
+
+func (src ProjectLikeModels) Unmarshal() []*project.ProjectLike {
+	out := make([]*project.ProjectLike, 0, len(src))
+	for _, item := range src {
+		dest := &project.ProjectLike{}
+		item.Unmarshal(dest)
+
+		out = append(out, dest)
+	}
+	return out
+}
+
+type ProjectLikes model.ProjectLikes
+
+func (src *ProjectLikes) Unmarshal(dest *project.ProjectLike) {
+	dest.ProjectID = project.ProjectID(src.ProjectID)
+	dest.UserID = project.UserID(src.ProjectUserID)
+	dest.CreatedTime = src.CreatedTime
 }

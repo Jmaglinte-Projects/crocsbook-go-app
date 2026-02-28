@@ -12,6 +12,7 @@ package table
 func UseSchema(schema string) {
 	Medias = Medias.FromSchema(schema)
 	Posts = Posts.FromSchema(schema)
+	ProjectLikes = ProjectLikes.FromSchema(schema)
 	Projects = Projects.FromSchema(schema)
 	SchemaMigrations = SchemaMigrations.FromSchema(schema)
 	Users = Users.FromSchema(schema)

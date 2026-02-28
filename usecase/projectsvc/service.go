@@ -16,6 +16,17 @@ type ProjectRepository interface {
 	Remove(ctx context.Context, ids ...project.ProjectID) error
 }
 
+type ProjectLikeRepository interface {
+	Find(ctx context.Context, projectID project.ProjectID) (*project.ProjectLike, error)
+	Store(ctx context.Context, entity *project.ProjectLike) error
+	Remove(ctx context.Context, ids ...RemoveCond) error
+}
+
+type RemoveCond struct {
+	ProjectID project.ProjectID
+	UserID    project.UserID
+}
+
 type ProjectR2Repository interface {
 	// Find returns a presigned URL for the object at key (for frontend display).
 	Find(ctx context.Context, key string) (string, error)

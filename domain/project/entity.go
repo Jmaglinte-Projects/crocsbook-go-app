@@ -39,6 +39,12 @@ type ThumbnailSet struct {
 	Content     []byte
 }
 
+type ProjectLike struct {
+	ProjectID   ProjectID
+	UserID      UserID
+	CreatedTime time.Time
+}
+
 type ListCond struct {
 	ProjectID  *ProjectID
 	ProjectIDs []ProjectID

@@ -30,14 +30,13 @@ func (s *projectServer) ShowProjects(ctx context.Context, req *pb.ShowProjectsIn
 	}
 
 	out := pb.ShowProjectsOut{
-		Items: make([]*pb.ViewProject, 0, len(projects.Items)),
+		Items: make([]*pb.Project, 0, len(projects.Items)),
 	}
 
 	for _, project := range projects.Items {
-		item := &VieWProject{}
+		item := &Project{}
 		item.UnmarshalOriginal(project)
-		out.Items = append(out.Items, &item.ViewProject)
-
+		out.Items = append(out.Items, (*pb.Project)(item))
 	}
 
 	return &out, nil
@@ -54,12 +53,12 @@ func (s *projectServer) ShowProject(ctx context.Context, req *pb.ShowProjectIn) 
 	}
 
 	out := pb.ShowProjectOut{
-		Item: &pb.ViewProject{},
+		Item: &pb.Project{},
 	}
 
-	item := &VieWProject{}
+	item := &Project{}
 	item.UnmarshalOriginal(project.Item)
-	out.Item = &item.ViewProject
+	out.Item = (*pb.Project)(item) //type conversion
 
 	return &out, nil
 }
@@ -128,48 +127,41 @@ func (s *projectServer) RemoveProject(ctx context.Context, req *pb.RemoveProject
 	return &pb.RemoveProjectOut{}, nil
 }
 
-type VieWProject struct {
-	pb.ViewProject
-}
+type Project pb.Project
 
-func (dest *VieWProject) UnmarshalOriginal(src *projectsvc.ViewProject) {
-	if dest.Project == nil {
-		dest.Project = &pb.Project{}
-	}
-	d := dest.Project
-
-	d.ProjectId = string(src.ProjectID)
-	d.ProjectUserId = string(src.ProjectUserID)
-	d.Name = src.Name
+func (dest *Project) UnmarshalOriginal(src *projectsvc.ViewProject) {
+	dest.ProjectId = string(src.ProjectID)
+	dest.ProjectUserId = string(src.ProjectUserID)
+	dest.Name = src.Name
 
 	if src.Description != nil {
-		d.Description = *src.Description
+		dest.Description = *src.Description
 	}
 
 	if src.ThumbnailKey != nil {
-		d.ThumbnailKey = *src.ThumbnailKey
+		dest.ThumbnailKey = *src.ThumbnailKey
 	}
 
 	if src.Location != nil {
-		d.Location = *src.Location
+		dest.Location = *src.Location
 	}
 
 	if src.Cost != nil {
-		d.Cost = *src.Cost
+		dest.Cost = *src.Cost
 	}
 
 	if src.StartDate != nil {
-		d.StartDate = timestamppb.New(*src.StartDate)
+		dest.StartDate = timestamppb.New(*src.StartDate)
 	}
 
 	if src.CompletionDate != nil {
-		d.CompletionDate = timestamppb.New(*src.CompletionDate)
+		dest.CompletionDate = timestamppb.New(*src.CompletionDate)
 	}
 
-	d.CreatedTime = timestamppb.New(src.CreatedTime)
+	dest.CreatedTime = timestamppb.New(src.CreatedTime)
 
 	if src.UpdatedTime != nil {
-		d.UpdatedTime = timestamppb.New(*src.UpdatedTime)
+		dest.UpdatedTime = timestamppb.New(*src.UpdatedTime)
 	}
 
 	dest.ThumbnailUrl = src.ThumbnailURL

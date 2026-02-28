@@ -16,7 +16,7 @@ service ProjectService {
 
 message ShowProjectsIn {}
 message ShowProjectsOut {
-  repeated ViewProject items = 1;
+  repeated Project items = 1;
   uint64 total = 2;
 }
 
@@ -24,7 +24,7 @@ message ShowProjectIn {
   string project_id = 1;
 }
 message ShowProjectOut {
-  ViewProject item = 1;
+  Project item = 1;
 }
 
 message CreateProjectIn {
@@ -58,13 +58,7 @@ message RemoveProjectIn {
   string project_id = 1;
 }
 message RemoveProjectOut {}
-
-message ViewProject {
-  Project project = 1;
-
-  string thumbnail_url = 2;
-}
-
+ 
 message Project {
   string project_id = 1;
   string project_user_id = 2;
@@ -77,4 +71,6 @@ message Project {
   google.protobuf.Timestamp completion_date = 9;
   google.protobuf.Timestamp created_time = 10;
   google.protobuf.Timestamp updated_time = 11;
+
+  string thumbnail_url = 12;
 }
