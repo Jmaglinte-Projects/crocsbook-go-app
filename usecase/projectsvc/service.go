@@ -17,7 +17,7 @@ type ProjectRepository interface {
 }
 
 type ProjectLikeRepository interface {
-	Find(ctx context.Context, projectID project.ProjectID) (*project.ProjectLike, error)
+	Find(ctx context.Context, projectID project.ProjectID, userID project.UserID) (*project.ProjectLike, error)
 	Store(ctx context.Context, entity *project.ProjectLike) error
 	Remove(ctx context.Context, ids ...RemoveCond) error
 }
@@ -37,6 +37,11 @@ type ProjectR2Repository interface {
 type ProjectService interface {
 	List(ctx context.Context, cond project.ListCond, option ListOption) ([]*ViewProject, error)
 	Count(ctx context.Context, cond project.CountCond, option CountOption) (*uint64, error)
+}
+
+type ProjectLikeService interface {
+	List(ctx context.Context, cond project.ProjectLikeListCond) ([]*project.ProjectLike, error)
+	Count(ctx context.Context, cond project.ProjectLikeCountCond) (*uint64, error)
 }
 
 type ListOption struct {
@@ -60,6 +65,9 @@ type Service interface {
 	CreateProject(ctx context.Context, in *CreateProjectIn) (*CreateProjectOut, error)
 	UpdateProject(ctx context.Context, in *UpdateProjectIn) (*UpdateProjectOut, error)
 	RemoveProject(ctx context.Context, in *RemoveProjectIn) (*RemoveProjectOut, error)
+	CountProjectLikes(ctx context.Context, in *CountProjectLikesIn) (*CountProjectLikesOut, error)
+	LikeProject(ctx context.Context, in *LikeProjectIn) (*LikeProjectOut, error)
+	UnlikeProject(ctx context.Context, in *UnlikeProjectIn) (*UnlikeProjectOut, error)
 }
 
 type ShowProjectsIn struct{}
@@ -107,17 +115,38 @@ type RemoveProjectIn struct {
 }
 type RemoveProjectOut struct{}
 
+type CountProjectLikesIn struct {
+	ProjectID project.ProjectID
+}
+type CountProjectLikesOut struct {
+	Count uint64
+}
+type LikeProjectIn struct {
+	ProjectID project.ProjectID
+	UserID    project.UserID
+}
+type LikeProjectOut struct{}
+type UnlikeProjectIn struct {
+	ProjectID project.ProjectID
+	UserID    project.UserID
+}
+type UnlikeProjectOut struct{}
+
 type service struct {
-	projectRepo   ProjectRepository
-	projectSvc    ProjectService
-	projectR2Repo ProjectR2Repository
+	projectRepo     ProjectRepository
+	projectSvc      ProjectService
+	projectR2Repo   ProjectR2Repository
+	projectLikeRepo ProjectLikeRepository
+	projectLikeSvc  ProjectLikeService
 }
 
-func NewService(projectRepo ProjectRepository, projectSvc ProjectService, projectR2Repo ProjectR2Repository) Service {
+func NewService(projectRepo ProjectRepository, projectSvc ProjectService, projectR2Repo ProjectR2Repository, projectLikeRepo ProjectLikeRepository, projectLikeSvc ProjectLikeService) Service {
 	return &service{
-		projectRepo:   projectRepo,
-		projectSvc:    projectSvc,
-		projectR2Repo: projectR2Repo,
+		projectRepo:     projectRepo,
+		projectSvc:      projectSvc,
+		projectR2Repo:   projectR2Repo,
+		projectLikeRepo: projectLikeRepo,
+		projectLikeSvc:  projectLikeSvc,
 	}
 }
 
@@ -280,6 +309,67 @@ func (s *service) RemoveProject(ctx context.Context, in *RemoveProjectIn) (*Remo
 	}
 
 	return &RemoveProjectOut{}, nil
+}
+
+func (s *service) CountProjectLikes(ctx context.Context, in *CountProjectLikesIn) (*CountProjectLikesOut, error) {
+	cond := &project.ProjectLikeCountCond{
+		ProjectID: &in.ProjectID,
+	}
+	count, err := s.projectLikeSvc.Count(ctx, *cond)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CountProjectLikesOut{
+		Count: *count,
+	}, nil
+}
+
+func (s *service) LikeProject(ctx context.Context, in *LikeProjectIn) (*LikeProjectOut, error) {
+	fmt.Println("--------------------------------")
+	fmt.Println("in.ProjectID: ", string(in.ProjectID))
+	fmt.Println("in.UserID: ", string(in.UserID))
+	fmt.Println("--------------------------------")
+
+	likeEntity, err := s.projectLikeRepo.Find(ctx, in.ProjectID, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if likeEntity != nil {
+		fmt.Println("Project already liked")
+		return nil, err
+	}
+
+	entity := &project.ProjectLike{}
+	entity.ProjectID = in.ProjectID
+	entity.UserID = in.UserID
+	entity.CreatedTime = time.Now()
+
+	if err := s.projectLikeRepo.Store(ctx, entity); err != nil {
+		return nil, err
+	}
+
+	return &LikeProjectOut{}, nil
+}
+
+func (s *service) UnlikeProject(ctx context.Context, in *UnlikeProjectIn) (*UnlikeProjectOut, error) {
+	likeEntity, err := s.projectLikeRepo.Find(ctx, in.ProjectID, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if likeEntity == nil {
+		fmt.Println("Project not liked")
+		return nil, err
+	}
+
+	cond := RemoveCond{ProjectID: in.ProjectID, UserID: in.UserID}
+	if err := s.projectLikeRepo.Remove(ctx, cond); err != nil {
+		return nil, err
+	}
+
+	return &UnlikeProjectOut{}, nil
 }
 
 type ViewProject struct {

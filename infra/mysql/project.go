@@ -122,10 +122,8 @@ func NewProjectLikeRepository(db *sql.DB) projectsvc.ProjectLikeRepository {
 	}
 }
 
-func (r *projectLikeRepository) Find(ctx context.Context, projectID project.ProjectID) (*project.ProjectLike, error) {
-	stmt := table.ProjectLikes.SELECT(table.ProjectLikes.AllColumns).WHERE(
-		table.ProjectLikes.ProjectID.EQ(jet.String(string(projectID))),
-	)
+func (r *projectLikeRepository) Find(ctx context.Context, projectID project.ProjectID, userID project.UserID) (*project.ProjectLike, error) {
+	stmt := table.ProjectLikes.SELECT(table.ProjectLikes.AllColumns).WHERE(jet.AND(table.ProjectLikes.ProjectID.EQ(jet.String(string(projectID))), table.ProjectLikes.ProjectUserID.EQ(jet.String(string(userID)))))
 
 	dest := &ProjectLikeModels{}
 	err := stmt.Query(r.db, dest)
@@ -348,6 +346,102 @@ func (src ProjectModels) ViewProject() []*projectsvc.ViewProject {
 		out = append(out, vw)
 	}
 	return out
+}
+
+type projectLikeService struct {
+	db *sql.DB
+}
+
+func NewProjectLikeService(db *sql.DB) projectsvc.ProjectLikeService {
+	return &projectLikeService{
+		db: db,
+	}
+}
+
+func (s *projectLikeService) List(ctx context.Context, cond project.ProjectLikeListCond) ([]*project.ProjectLike, error) {
+	stmt := table.ProjectLikes.SELECT(table.ProjectLikes.AllColumns)
+	pred := []jet.BoolExpression{}
+	orderBy := []jet.OrderByClause{}
+
+	if cond.ProjectID != nil {
+		pred = append(pred, table.ProjectLikes.ProjectID.EQ(jet.String(string(*cond.ProjectID))))
+	}
+
+	if cond.UserID != nil {
+		pred = append(pred, table.ProjectLikes.ProjectUserID.EQ(jet.String(string(*cond.UserID))))
+	}
+
+	if len(pred) > 0 {
+		stmt = stmt.WHERE(jet.AND(pred...))
+	}
+
+	stmt = stmt.ORDER_BY(orderBy...)
+
+	/*
+		if option.Offset != nil {
+			stmt = stmt.OFFSET(*option.Offset)
+		}
+
+		if option.Size > 0 {
+			stmt = stmt.LIMIT(option.Size)
+		}
+	*/
+
+	debugSql := stmt.DebugSql()
+	if os.Getenv("MYSQL_LOGGING_ENABLED") == "true" {
+		fmt.Println("--------------------------------")
+		fmt.Println(debugSql)
+		fmt.Println("--------------------------------")
+	}
+
+	dest := &ProjectLikeModels{}
+	err := stmt.Query(s.db, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*dest) == 0 {
+		return nil, nil
+	}
+
+	out := dest.Unmarshal()
+
+	return out, nil
+}
+
+func (s *projectLikeService) Count(ctx context.Context, cond project.ProjectLikeCountCond) (*uint64, error) {
+	stmt := table.ProjectLikes.SELECT(jet.COUNT(table.ProjectLikes.ProjectID).AS("count"))
+	pred := []jet.BoolExpression{}
+
+	if cond.ProjectID != nil {
+		pred = append(pred, table.ProjectLikes.ProjectID.EQ(jet.String(string(*cond.ProjectID))))
+	}
+
+	if cond.UserID != nil {
+		pred = append(pred, table.ProjectLikes.ProjectUserID.EQ(jet.String(string(*cond.UserID))))
+	}
+
+	if len(pred) > 0 {
+		stmt = stmt.WHERE(jet.AND(pred...))
+	}
+
+	debugSql := stmt.DebugSql()
+	if os.Getenv("MYSQL_LOGGING_ENABLED") == "true" {
+		fmt.Println("--------------------------------")
+		fmt.Println(debugSql)
+		fmt.Println("--------------------------------")
+	}
+
+	var dest []struct {
+		Count uint64
+	}
+
+	err := stmt.QueryContext(ctx, s.db, &dest)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dest[0].Count, nil
 }
 
 type ProjectLikeModels []struct {

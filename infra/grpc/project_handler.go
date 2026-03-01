@@ -80,9 +80,9 @@ func (s *projectServer) CreateProject(ctx context.Context, req *pb.CreateProject
 		CompletionDate:   &completionDate,
 	}
 
-	fmt.Println("--------------------------------")
-	fmt.Println("in.ThumbnailContent: ", in.ThumbnailContent)
-	fmt.Println("--------------------------------")
+	// fmt.Println("--------------------------------")
+	// fmt.Println("in.ThumbnailContent: ", in.ThumbnailContent)
+	// fmt.Println("--------------------------------")
 
 	_, err := s.svc.CreateProject(ctx, &in)
 	if err != nil {
@@ -125,6 +125,55 @@ func (s *projectServer) RemoveProject(ctx context.Context, req *pb.RemoveProject
 	}
 
 	return &pb.RemoveProjectOut{}, nil
+}
+
+func (s *projectServer) CountProjectLikes(ctx context.Context, req *pb.CountProjectLikesIn) (*pb.CountProjectLikesOut, error) {
+	in := projectsvc.CountProjectLikesIn{
+		ProjectID: project.ProjectID(req.ProjectId),
+	}
+
+	count, err := s.svc.CountProjectLikes(ctx, &in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.CountProjectLikesOut{
+		Count: count.Count,
+	}, nil
+}
+
+func (s *projectServer) LikeProject(ctx context.Context, req *pb.LikeProjectIn) (*pb.LikeProjectOut, error) {
+
+	fmt.Println("--------------------------------")
+	fmt.Println("in.ProjectID: ", req.ProjectId)
+	fmt.Println("in.UserID: ", req.UserId)
+	fmt.Println("--------------------------------")
+
+	in := projectsvc.LikeProjectIn{
+		ProjectID: project.ProjectID(req.ProjectId),
+		UserID:    project.UserID(req.UserId),
+	}
+
+	_, err := s.svc.LikeProject(ctx, &in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.LikeProjectOut{}, nil
+}
+
+func (s *projectServer) UnlikeProject(ctx context.Context, req *pb.UnlikeProjectIn) (*pb.UnlikeProjectOut, error) {
+	in := projectsvc.UnlikeProjectIn{
+		ProjectID: project.ProjectID(req.ProjectId),
+		UserID:    project.UserID(req.UserId),
+	}
+
+	_, err := s.svc.UnlikeProject(ctx, &in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.UnlikeProjectOut{}, nil
 }
 
 type Project pb.Project

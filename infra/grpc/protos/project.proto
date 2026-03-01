@@ -12,6 +12,9 @@ service ProjectService {
   rpc CreateProject (CreateProjectIn) returns (CreateProjectOut);
   rpc UpdateProject (UpdateProjectIn) returns (UpdateProjectOut);
   rpc RemoveProject (RemoveProjectIn) returns (RemoveProjectOut);
+  rpc CountProjectLikes (CountProjectLikesIn) returns (CountProjectLikesOut);
+  rpc LikeProject (LikeProjectIn) returns (LikeProjectOut);
+  rpc UnlikeProject (UnlikeProjectIn) returns (UnlikeProjectOut);
 }
 
 message ShowProjectsIn {}
@@ -58,7 +61,26 @@ message RemoveProjectIn {
   string project_id = 1;
 }
 message RemoveProjectOut {}
- 
+
+message CountProjectLikesIn {
+  string project_id = 1;
+}
+message CountProjectLikesOut {
+  uint64 count = 1;
+}
+
+message LikeProjectIn {
+  string project_id = 1;
+  string user_id = 2;
+}
+message LikeProjectOut {}
+
+message UnlikeProjectIn {
+  string project_id = 1;
+  string user_id = 2;
+}
+message UnlikeProjectOut {}
+
 message Project {
   string project_id = 1;
   string project_user_id = 2;

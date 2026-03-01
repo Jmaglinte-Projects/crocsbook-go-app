@@ -51,3 +51,10 @@ type ListCond struct {
 }
 
 type CountCond ListCond
+
+type ProjectLikeListCond struct {
+	ProjectID *ProjectID
+	UserID    *UserID
+}
+
+type ProjectLikeCountCond ProjectLikeListCond
