@@ -14,7 +14,8 @@ type Post struct {
 	CreatedTime   time.Time
 	UpdatedTime   *time.Time
 
-	MediaSets []MediaSet
+	MediaSets         []MediaSet
+	PostReactionCount uint64
 }
 
 type PostID string
@@ -40,6 +41,31 @@ type MediaSet struct {
 	ContentType string
 	Content     []byte
 }
+
+type PostReactions struct {
+	PostReactionID string
+	PostID         string
+	UserID         string
+	ReactionType   *ReactionType
+	CreatedTime    time.Time
+}
+
+type PostReactionID string
+
+func NewPostReactionID() (PostReactionID, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return "", err
+	}
+	return PostReactionID(id.String()), nil
+}
+
+type ReactionType string
+
+const (
+	ReactionType_Like  ReactionType = "Like"
+	ReactionType_Heart ReactionType = "Heart"
+)
 
 type ListCond struct {
 	PostID         *PostID

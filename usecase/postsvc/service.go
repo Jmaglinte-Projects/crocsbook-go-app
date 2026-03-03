@@ -21,6 +21,12 @@ type PostRepository interface {
 	Remove(ctx context.Context, ids ...post.PostID) error
 }
 
+type PostReactionRepository interface {
+	Find(ctx context.Context, id post.PostReactionID) (*post.PostReactions, error)
+	Store(ctx context.Context, entity *post.PostReactions) error
+	Remove(ctx context.Context, ids ...post.PostReactionID) error
+}
+
 type PostService interface {
 	List(ctx context.Context, cond post.ListCond) ([]*ViewPost, error)
 	Count(ctx context.Context, cond post.CountCond) (*uint64, error)
@@ -160,8 +166,8 @@ func (s *service) ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, e
 		return nil, err
 	}
 
-	b, _ := json.MarshalIndent(entity.Project, "", "  ")
-	fmt.Println("entity.Project:", string(b))
+	b, _ := json.MarshalIndent(entity.Post, "", "  ")
+	fmt.Println("entity.Post:", string(b))
 
 	return &ShowPostOut{
 		Item: entity,

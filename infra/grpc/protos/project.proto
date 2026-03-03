@@ -15,6 +15,7 @@ service ProjectService {
   rpc CountProjectLikes (CountProjectLikesIn) returns (CountProjectLikesOut);
   rpc LikeProject (LikeProjectIn) returns (LikeProjectOut);
   rpc UnlikeProject (UnlikeProjectIn) returns (UnlikeProjectOut);
+  rpc CheckProjectLiked (CheckProjectLikedIn) returns (CheckProjectLikedOut);
 }
 
 message ShowProjectsIn {}
@@ -80,6 +81,14 @@ message UnlikeProjectIn {
   string user_id = 2;
 }
 message UnlikeProjectOut {}
+
+message CheckProjectLikedIn {
+  string project_id = 1;
+  string user_id = 2;
+}
+message CheckProjectLikedOut {
+  bool liked = 1;
+}
 
 message Project {
   string project_id = 1;

@@ -26,8 +26,34 @@ func NewPostRepository(db *sql.DB) postsvc.PostRepository {
 }
 
 func (r *postRepository) Find(ctx context.Context, id post.PostID) (*postsvc.ViewPost, error) {
-	stmt := table.Posts.SELECT(table.Posts.AllColumns).WHERE(
+	postReactionSubQuery := jet.SELECT(table.PostReactions.PostID, jet.COUNT(table.PostReactions.PostID).AS("post_reaction_count")).FROM(table.PostReactions).GROUP_BY(table.PostReactions.PostID).AsTable("pr")
+
+	stmt := table.Posts.LEFT_JOIN(postReactionSubQuery, table.PostReactions.PostID.From(postReactionSubQuery).EQ(table.Posts.PostID)).
+		SELECT(table.Posts.AllColumns, jet.IntegerColumn("post_reaction_count").From(postReactionSubQuery)).WHERE(
 		table.Posts.PostID.EQ(jet.String(string(id))))
+
+	debugSql := stmt.DebugSql()
+	fmt.Println("--------------------------------")
+	fmt.Println(debugSql)
+
+	/*
+		SELECT posts.post_id AS "posts.post_id",
+				posts.post_project_id AS "posts.post_project_id",
+				posts.content AS "posts.content",
+				posts.visibility AS "posts.visibility",
+				posts.created_time AS "posts.created_time",
+				posts.updated_time AS "posts.updated_time",
+				pr.post_reaction_count AS "post_reaction_count"
+		FROM db_crocs.posts
+				LEFT JOIN (
+							SELECT post_reactions.post_id AS "post_reactions.post_id",
+									COUNT(post_reactions.post_id) AS "post_reaction_count"
+							FROM db_crocs.post_reactions
+							GROUP BY post_reactions.post_id
+				) AS pr ON (pr.`post_reactions.post_id` = posts.post_id)
+		WHERE posts.post_id = '15aac350-0f7f-11f1-826f-8abfd21201dc';
+	*/
+	fmt.Println("--------------------------------")
 
 	dest := &PostModels{}
 	err := stmt.Query(r.db, dest)
@@ -35,9 +61,27 @@ func (r *postRepository) Find(ctx context.Context, id post.PostID) (*postsvc.Vie
 		return nil, err
 	}
 
-	debugSql := stmt.DebugSql()
-	fmt.Println("--------------------------------")
-	fmt.Println(debugSql)
+	// debugSql := stmt.DebugSql()
+	// fmt.Println("--------------------------------")
+	// fmt.Println(debugSql)
+
+	/*
+		SELECT posts.post_id AS "posts.post_id",
+				posts.post_project_id AS "posts.post_project_id",
+				posts.content AS "posts.content",
+				posts.visibility AS "posts.visibility",
+				posts.created_time AS "posts.created_time",
+				posts.updated_time AS "posts.updated_time",
+				pr.post_reaction_count AS "post_reaction_count"
+		FROM db_crocs.posts
+				LEFT JOIN (
+							SELECT post_reactions.post_id AS "post_reactions.post_id",
+									COUNT(post_reactions.post_id) AS "post_reaction_count"
+							FROM db_crocs.post_reactions
+							GROUP BY post_reactions.post_id
+				) AS pr ON (pr.`post_reactions.post_id` = posts.post_id)
+		WHERE posts.post_id = '15aac350-0f7f-11f1-826f-8abfd21201dc';
+	*/
 	fmt.Println("--------------------------------")
 
 	if len(*dest) == 0 {
@@ -108,6 +152,48 @@ func (r *postRepository) Remove(ctx context.Context, ids ...post.PostID) error {
 	return nil
 }
 
+// type postReactionRepository struct {
+// 	db *sql.DB
+// }
+
+// func NewPostReactionRepository(db *sql.DB) postsvc.PostReactionRepository {
+// 	return &postReactionRepository{
+// 		db: db,
+// 	}
+// }
+
+// func (r *postReactionRepository) Find(ctx context.Context, id post.PostReactionID) (*post.PostReactions, error) {
+// 	stmt := table.PostReactions.SELECT(table.PostReactions.AllColumns).WHERE(
+// 		table.PostReactions.PostReactionID.EQ(jet.String(string(id))))
+
+// 	dest := &PostReactionsModels{}
+// 	err := stmt.Query(r.db, dest)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	debugSql := stmt.DebugSql()
+// 	fmt.Println("--------------------------------")
+// 	fmt.Println(debugSql)
+// 	fmt.Println("--------------------------------")
+
+// 	if len(*dest) == 0 {
+// 		return nil, nil
+// 	}
+
+// 	out := dest.Unmarshal()
+
+// 	return out[0], nil
+// }
+
+// func (r *postReactionRepository) Store(ctx context.Context, entity *post.PostReactions) error {
+// 	return nil
+// }
+
+// func (r *postReactionRepository) Remove(ctx context.Context, ids ...post.PostReactionID) error {
+// 	return nil
+// }
+
 type postService struct {
 	db *sql.DB
 }
@@ -119,7 +205,10 @@ func NewPostService(db *sql.DB) postsvc.PostService {
 }
 
 func (s *postService) List(ctx context.Context, cond post.ListCond) ([]*postsvc.ViewPost, error) {
-	stmt := table.Posts.SELECT(table.Posts.AllColumns)
+	postReactionSubQuery := jet.SELECT(table.PostReactions.PostID, jet.COUNT(table.PostReactions.PostID).AS("post_reaction_count")).FROM(table.PostReactions).GROUP_BY(table.PostReactions.PostID).AsTable("pr")
+
+	stmt := table.Posts.LEFT_JOIN(postReactionSubQuery, table.PostReactions.PostID.From(postReactionSubQuery).EQ(table.Posts.PostID)).SELECT(table.Posts.AllColumns, jet.IntegerColumn("post_reaction_count").From(postReactionSubQuery))
+
 	pred := []jet.BoolExpression{}
 	orderBy := []jet.OrderByClause{}
 
@@ -343,6 +432,8 @@ func (s *postService) ListPostStatsByProjectIds(ctx context.Context, cond post.L
 
 type PostModels []struct {
 	model.Posts
+
+	PostReactionCount uint64
 }
 
 func (src PostModels) ViewPost() []*postsvc.ViewPost {
@@ -355,6 +446,7 @@ func (src PostModels) ViewPost() []*postsvc.ViewPost {
 		postEntity.Visibility = (*post.Visibility)(item.Visibility)
 		postEntity.CreatedTime = item.CreatedTime
 		postEntity.UpdatedTime = item.UpdatedTime
+		postEntity.PostReactionCount = item.PostReactionCount
 
 		vw := &postsvc.ViewPost{
 			Post: *postEntity,
@@ -381,3 +473,21 @@ func (src CountTotalPostsByProjectIdModel) Format() []*postsvc.ListPostStatsByPr
 	}
 	return out
 }
+
+// type PostReactionsModels []struct {
+// 	model.PostReactions
+// }
+
+// func (src PostReactionsModels) Unmarshal() []*post.PostReactions {
+// 	out := make([]*post.PostReactions, 0, len(src))
+// 	for _, item := range src {
+// 		postReactionEntity := &post.PostReactions{}
+// 		postReactionEntity.PostReactionID = post.PostReactionID(item.PostReactionID)
+// 		postReactionEntity.PostID = post.PostID(item.PostID)
+// 		postReactionEntity.UserID = post.UserID(item.UserID)
+// 		postReactionEntity.ReactionType = (*post.ReactionType)(item.ReactionType)
+// 		postReactionEntity.CreatedTime = item.CreatedTime
+// 		out = append(out, postReactionEntity)
+// 	}
+// 	return out
+// }

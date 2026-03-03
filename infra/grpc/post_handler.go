@@ -168,6 +168,7 @@ func (dest *Post) UnmarshalOriginal(src *postsvc.ViewPost) {
 
 	dest.PostCount = src.PostCount
 	dest.LastPostTime = timestamppb.New(src.LastPostTime)
+	dest.PostReactionCount = src.PostReactionCount
 
 	if src.Project != nil {
 		dest.Project = &pb.Post_Project{}

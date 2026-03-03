@@ -68,6 +68,7 @@ type Service interface {
 	CountProjectLikes(ctx context.Context, in *CountProjectLikesIn) (*CountProjectLikesOut, error)
 	LikeProject(ctx context.Context, in *LikeProjectIn) (*LikeProjectOut, error)
 	UnlikeProject(ctx context.Context, in *UnlikeProjectIn) (*UnlikeProjectOut, error)
+	CheckProjectLiked(ctx context.Context, in *CheckProjectLikedIn) (*CheckProjectLikedOut, error)
 }
 
 type ShowProjectsIn struct{}
@@ -131,6 +132,14 @@ type UnlikeProjectIn struct {
 	UserID    project.UserID
 }
 type UnlikeProjectOut struct{}
+
+type CheckProjectLikedIn struct {
+	ProjectID project.ProjectID
+	UserID    project.UserID
+}
+type CheckProjectLikedOut struct {
+	Liked bool
+}
 
 type service struct {
 	projectRepo     ProjectRepository
@@ -370,6 +379,19 @@ func (s *service) UnlikeProject(ctx context.Context, in *UnlikeProjectIn) (*Unli
 	}
 
 	return &UnlikeProjectOut{}, nil
+}
+
+func (s *service) CheckProjectLiked(ctx context.Context, in *CheckProjectLikedIn) (*CheckProjectLikedOut, error) {
+	likeEntity, err := s.projectLikeRepo.Find(ctx, in.ProjectID, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if likeEntity == nil {
+		return &CheckProjectLikedOut{Liked: false}, nil
+	}
+
+	return &CheckProjectLikedOut{Liked: true}, nil
 }
 
 type ViewProject struct {

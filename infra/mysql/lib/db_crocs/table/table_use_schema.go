@@ -11,6 +11,7 @@ package table
 // this method only once at the beginning of the program.
 func UseSchema(schema string) {
 	Medias = Medias.FromSchema(schema)
+	PostReactions = PostReactions.FromSchema(schema)
 	Posts = Posts.FromSchema(schema)
 	ProjectLikes = ProjectLikes.FromSchema(schema)
 	Projects = Projects.FromSchema(schema)

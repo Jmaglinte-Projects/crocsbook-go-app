@@ -176,6 +176,22 @@ func (s *projectServer) UnlikeProject(ctx context.Context, req *pb.UnlikeProject
 	return &pb.UnlikeProjectOut{}, nil
 }
 
+func (s *projectServer) CheckProjectLiked(ctx context.Context, req *pb.CheckProjectLikedIn) (*pb.CheckProjectLikedOut, error) {
+	in := projectsvc.CheckProjectLikedIn{
+		ProjectID: project.ProjectID(req.ProjectId),
+		UserID:    project.UserID(req.UserId),
+	}
+
+	result, err := s.svc.CheckProjectLiked(ctx, &in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.CheckProjectLikedOut{
+		Liked: result.Liked,
+	}, nil
+}
+
 type Project pb.Project
 
 func (dest *Project) UnmarshalOriginal(src *projectsvc.ViewProject) {
