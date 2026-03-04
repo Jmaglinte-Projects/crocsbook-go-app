@@ -28,8 +28,20 @@ func NewPostRepository(db *sql.DB) postsvc.PostRepository {
 func (r *postRepository) Find(ctx context.Context, id post.PostID) (*postsvc.ViewPost, error) {
 	postReactionSubQuery := jet.SELECT(table.PostReactions.PostID, jet.COUNT(table.PostReactions.PostID).AS("post_reaction_count")).FROM(table.PostReactions).GROUP_BY(table.PostReactions.PostID).AsTable("pr")
 
-	stmt := table.Posts.LEFT_JOIN(postReactionSubQuery, table.PostReactions.PostID.From(postReactionSubQuery).EQ(table.Posts.PostID)).
-		SELECT(table.Posts.AllColumns, jet.IntegerColumn("post_reaction_count").From(postReactionSubQuery)).WHERE(
+	pr := table.PostReactions
+	hasReactedExists := jet.EXISTS(
+		jet.SELECT(jet.Int(1)).
+			FROM(pr).
+			WHERE(
+				pr.PostID.EQ(table.Posts.PostID).
+					AND(pr.UserID.EQ(table.Projects.ProjectUserID)),
+			),
+	).AS("has_reacted")
+
+	stmt := table.Posts.
+		LEFT_JOIN(postReactionSubQuery, table.PostReactions.PostID.From(postReactionSubQuery).EQ(table.Posts.PostID)).
+		LEFT_JOIN(table.Projects, table.Projects.ProjectID.EQ(table.Posts.PostProjectID)).
+		SELECT(table.Posts.AllColumns, jet.IntegerColumn("post_reaction_count").From(postReactionSubQuery), hasReactedExists).WHERE(
 		table.Posts.PostID.EQ(jet.String(string(id))))
 
 	debugSql := stmt.DebugSql()
@@ -38,12 +50,17 @@ func (r *postRepository) Find(ctx context.Context, id post.PostID) (*postsvc.Vie
 
 	/*
 		SELECT posts.post_id AS "posts.post_id",
-				posts.post_project_id AS "posts.post_project_id",
-				posts.content AS "posts.content",
-				posts.visibility AS "posts.visibility",
-				posts.created_time AS "posts.created_time",
-				posts.updated_time AS "posts.updated_time",
-				pr.post_reaction_count AS "post_reaction_count"
+			posts.post_project_id AS "posts.post_project_id",
+			posts.content AS "posts.content",
+			posts.visibility AS "posts.visibility",
+			posts.created_time AS "posts.created_time",
+			posts.updated_time AS "posts.updated_time",
+			pr.post_reaction_count AS "post_reaction_count",
+			(EXISTS (
+					SELECT 1
+					FROM db_crocs.post_reactions
+					WHERE (post_reactions.post_id = posts.post_id) AND (post_reactions.user_id = projects.project_user_id)
+			)) AS "has_reacted"
 		FROM db_crocs.posts
 				LEFT JOIN (
 							SELECT post_reactions.post_id AS "post_reactions.post_id",
@@ -51,6 +68,7 @@ func (r *postRepository) Find(ctx context.Context, id post.PostID) (*postsvc.Vie
 							FROM db_crocs.post_reactions
 							GROUP BY post_reactions.post_id
 				) AS pr ON (pr.`post_reactions.post_id` = posts.post_id)
+				LEFT JOIN db_crocs.projects ON (projects.project_id = posts.post_project_id)
 		WHERE posts.post_id = '15aac350-0f7f-11f1-826f-8abfd21201dc';
 	*/
 	fmt.Println("--------------------------------")
@@ -207,7 +225,20 @@ func NewPostService(db *sql.DB) postsvc.PostService {
 func (s *postService) List(ctx context.Context, cond post.ListCond) ([]*postsvc.ViewPost, error) {
 	postReactionSubQuery := jet.SELECT(table.PostReactions.PostID, jet.COUNT(table.PostReactions.PostID).AS("post_reaction_count")).FROM(table.PostReactions).GROUP_BY(table.PostReactions.PostID).AsTable("pr")
 
-	stmt := table.Posts.LEFT_JOIN(postReactionSubQuery, table.PostReactions.PostID.From(postReactionSubQuery).EQ(table.Posts.PostID)).SELECT(table.Posts.AllColumns, jet.IntegerColumn("post_reaction_count").From(postReactionSubQuery))
+	pr := table.PostReactions
+	hasReactedExists := jet.EXISTS(
+		jet.SELECT(jet.Int(1)).
+			FROM(pr).
+			WHERE(
+				pr.PostID.EQ(table.Posts.PostID).
+					AND(pr.UserID.EQ(table.Projects.ProjectUserID)),
+			),
+	).AS("has_reacted")
+
+	stmt := table.Posts.
+		LEFT_JOIN(postReactionSubQuery, table.PostReactions.PostID.From(postReactionSubQuery).EQ(table.Posts.PostID)).
+		LEFT_JOIN(table.Projects, table.Projects.ProjectID.EQ(table.Posts.PostProjectID)).
+		SELECT(table.Posts.AllColumns, jet.IntegerColumn("post_reaction_count").From(postReactionSubQuery), hasReactedExists)
 
 	pred := []jet.BoolExpression{}
 	orderBy := []jet.OrderByClause{}
@@ -434,6 +465,7 @@ type PostModels []struct {
 	model.Posts
 
 	PostReactionCount uint64
+	HasReacted        bool
 }
 
 func (src PostModels) ViewPost() []*postsvc.ViewPost {
@@ -447,6 +479,7 @@ func (src PostModels) ViewPost() []*postsvc.ViewPost {
 		postEntity.CreatedTime = item.CreatedTime
 		postEntity.UpdatedTime = item.UpdatedTime
 		postEntity.PostReactionCount = item.PostReactionCount
+		postEntity.HasReacted = item.HasReacted
 
 		vw := &postsvc.ViewPost{
 			Post: *postEntity,

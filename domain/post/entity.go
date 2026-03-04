@@ -16,6 +16,7 @@ type Post struct {
 
 	MediaSets         []MediaSet
 	PostReactionCount uint64
+	HasReacted        bool
 }
 
 type PostID string

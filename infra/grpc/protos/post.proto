@@ -93,6 +93,7 @@ message Post {
   uint64 post_count = 9;  
 	google.protobuf.Timestamp last_post_time = 10;
   uint64 post_reaction_count = 11;
+  bool has_reacted = 12;
 }
  
 message Post_Project {
