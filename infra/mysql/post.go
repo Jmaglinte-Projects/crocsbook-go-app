@@ -170,47 +170,47 @@ func (r *postRepository) Remove(ctx context.Context, ids ...post.PostID) error {
 	return nil
 }
 
-// type postReactionRepository struct {
-// 	db *sql.DB
-// }
+type postReactionRepository struct {
+	db *sql.DB
+}
 
-// func NewPostReactionRepository(db *sql.DB) postsvc.PostReactionRepository {
-// 	return &postReactionRepository{
-// 		db: db,
-// 	}
-// }
+func NewPostReactionRepository(db *sql.DB) postsvc.PostReactionRepository {
+	return &postReactionRepository{
+		db: db,
+	}
+}
 
-// func (r *postReactionRepository) Find(ctx context.Context, id post.PostReactionID) (*post.PostReactions, error) {
-// 	stmt := table.PostReactions.SELECT(table.PostReactions.AllColumns).WHERE(
-// 		table.PostReactions.PostReactionID.EQ(jet.String(string(id))))
+func (r *postReactionRepository) Find(ctx context.Context, id post.PostReactionID) (*post.PostReactions, error) {
+	stmt := table.PostReactions.SELECT(table.PostReactions.AllColumns).WHERE(
+		table.PostReactions.PostReactionID.EQ(jet.String(string(id))))
 
-// 	dest := &PostReactionsModels{}
-// 	err := stmt.Query(r.db, dest)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	dest := &PostReactionsModels{}
+	err := stmt.Query(r.db, dest)
+	if err != nil {
+		return nil, err
+	}
 
-// 	debugSql := stmt.DebugSql()
-// 	fmt.Println("--------------------------------")
-// 	fmt.Println(debugSql)
-// 	fmt.Println("--------------------------------")
+	debugSql := stmt.DebugSql()
+	fmt.Println("--------------------------------")
+	fmt.Println(debugSql)
+	fmt.Println("--------------------------------")
 
-// 	if len(*dest) == 0 {
-// 		return nil, nil
-// 	}
+	if len(*dest) == 0 {
+		return nil, nil
+	}
 
-// 	out := dest.Unmarshal()
+	out := dest.Unmarshal()
 
-// 	return out[0], nil
-// }
+	return out[0], nil
+}
 
-// func (r *postReactionRepository) Store(ctx context.Context, entity *post.PostReactions) error {
-// 	return nil
-// }
+func (r *postReactionRepository) Store(ctx context.Context, entity *post.PostReactions) error {
+	return nil
+}
 
-// func (r *postReactionRepository) Remove(ctx context.Context, ids ...post.PostReactionID) error {
-// 	return nil
-// }
+func (r *postReactionRepository) Remove(ctx context.Context, ids ...post.PostReactionID) error {
+	return nil
+}
 
 type postService struct {
 	db *sql.DB
@@ -461,6 +461,115 @@ func (s *postService) ListPostStatsByProjectIds(ctx context.Context, cond post.L
 	return out, nil
 }
 
+type postReactionService struct {
+	db *sql.DB
+}
+
+func NewPostReactionService(db *sql.DB) postsvc.PostReactionService {
+	return &postReactionService{
+		db: db,
+	}
+}
+
+func (s *postReactionService) List(ctx context.Context, cond post.ListPostReactionsCond) ([]*post.PostReactions, error) {
+	stmt := table.PostReactions.SELECT(table.PostReactions.AllColumns)
+
+	pred := []jet.BoolExpression{}
+	orderBy := []jet.OrderByClause{}
+
+	if cond.PostReactionID != nil {
+		pred = append(pred, table.PostReactions.PostReactionID.EQ(jet.String(string(*cond.PostReactionID))))
+	}
+
+	if cond.PostID != nil {
+		pred = append(pred, table.PostReactions.PostID.EQ(jet.String(string(*cond.PostID))))
+	}
+
+	if cond.UserID != nil {
+		pred = append(pred, table.PostReactions.UserID.EQ(jet.String(string(*cond.UserID))))
+	}
+
+	switch cond.SortKey {
+	case post.PostReactionSortKey_CreatedTime_ASC:
+		orderBy = append(orderBy, table.PostReactions.CreatedTime.ASC())
+	case post.PostReactionSortKey_CreatedTime_DESC:
+		orderBy = append(orderBy, table.PostReactions.CreatedTime.DESC())
+	default:
+		orderBy = append(orderBy, table.PostReactions.CreatedTime.DESC())
+	}
+
+	if len(pred) > 0 {
+		stmt = stmt.WHERE(jet.AND(pred...))
+	}
+
+	stmt = stmt.ORDER_BY(orderBy...)
+
+	if cond.Offset != nil {
+		stmt = stmt.OFFSET(*cond.Offset)
+	}
+
+	if cond.Size > 0 {
+		stmt = stmt.LIMIT(cond.Size)
+	}
+
+	debugSql := stmt.DebugSql()
+	fmt.Println("--------------------------------")
+	fmt.Println(debugSql)
+	fmt.Println("--------------------------------")
+
+	dest := &PostReactionsModels{}
+	err := stmt.Query(s.db, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*dest) == 0 {
+		return nil, nil
+	}
+
+	out := dest.Unmarshal()
+
+	return out, nil
+}
+
+func (s *postReactionService) Count(ctx context.Context, cond post.CountPostReactionsCond) (*uint64, error) {
+	stmt := table.PostReactions.SELECT(table.PostReactions.AllColumns)
+	pred := []jet.BoolExpression{}
+
+	if cond.PostReactionID != nil {
+		pred = append(pred, table.PostReactions.PostReactionID.EQ(jet.String(string(*cond.PostReactionID))))
+	}
+
+	if cond.PostID != nil {
+		pred = append(pred, table.PostReactions.PostID.EQ(jet.String(string(*cond.PostID))))
+	}
+
+	if cond.UserID != nil {
+		pred = append(pred, table.PostReactions.UserID.EQ(jet.String(string(*cond.UserID))))
+	}
+
+	if len(pred) > 0 {
+		stmt = stmt.WHERE(jet.AND(pred...))
+	}
+
+	debugSql := stmt.DebugSql()
+	fmt.Println("--------------------------------")
+	fmt.Println(debugSql)
+	fmt.Println("--------------------------------")
+
+	var dest []struct {
+		// TIP if there are weird error this was changed from uint32 to uint64
+		Count uint64
+	}
+
+	err := stmt.QueryContext(ctx, s.db, &dest)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dest[0].Count, nil
+}
+
 type PostModels []struct {
 	model.Posts
 
@@ -507,20 +616,20 @@ func (src CountTotalPostsByProjectIdModel) Format() []*postsvc.ListPostStatsByPr
 	return out
 }
 
-// type PostReactionsModels []struct {
-// 	model.PostReactions
-// }
+type PostReactionsModels []struct {
+	model.PostReactions
+}
 
-// func (src PostReactionsModels) Unmarshal() []*post.PostReactions {
-// 	out := make([]*post.PostReactions, 0, len(src))
-// 	for _, item := range src {
-// 		postReactionEntity := &post.PostReactions{}
-// 		postReactionEntity.PostReactionID = post.PostReactionID(item.PostReactionID)
-// 		postReactionEntity.PostID = post.PostID(item.PostID)
-// 		postReactionEntity.UserID = post.UserID(item.UserID)
-// 		postReactionEntity.ReactionType = (*post.ReactionType)(item.ReactionType)
-// 		postReactionEntity.CreatedTime = item.CreatedTime
-// 		out = append(out, postReactionEntity)
-// 	}
-// 	return out
-// }
+func (src PostReactionsModels) Unmarshal() []*post.PostReactions {
+	out := make([]*post.PostReactions, 0, len(src))
+	for _, item := range src {
+		postReactionEntity := &post.PostReactions{}
+		postReactionEntity.PostReactionID = post.PostReactionID(item.PostReactionID)
+		postReactionEntity.PostID = post.PostID(item.PostID)
+		postReactionEntity.UserID = item.UserID
+		postReactionEntity.ReactionType = (*post.ReactionType)(item.ReactionType)
+		postReactionEntity.CreatedTime = item.CreatedTime
+		out = append(out, postReactionEntity)
+	}
+	return out
+}

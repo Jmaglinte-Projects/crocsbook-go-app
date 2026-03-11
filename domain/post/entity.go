@@ -44,8 +44,8 @@ type MediaSet struct {
 }
 
 type PostReactions struct {
-	PostReactionID string
-	PostID         string
+	PostReactionID PostReactionID
+	PostID         PostID
 	UserID         string
 	ReactionType   *ReactionType
 	CreatedTime    time.Time
@@ -95,4 +95,24 @@ type PostSortKey uint
 const (
 	PostSortKey_CreatedTime_ASC PostSortKey = iota
 	PostSortKey_CreatedTime_DESC
+)
+
+type ListPostReactionsCond struct {
+	PostReactionID *PostReactionID
+	PostID         *PostID
+	UserID         *string
+
+	// TODO pagination
+	SortKey PostReactionSortKey
+	Size    int64
+	Offset  *int64
+}
+
+type CountPostReactionsCond ListPostReactionsCond
+
+type PostReactionSortKey uint
+
+const (
+	PostReactionSortKey_CreatedTime_ASC PostReactionSortKey = iota
+	PostReactionSortKey_CreatedTime_DESC
 )

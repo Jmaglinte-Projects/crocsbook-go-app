@@ -61,28 +61,32 @@ func main() {
 
 	var (
 		// repository
-		mediaRepo       mediasvc.MediaRepository
-		postRepo        postsvc.PostRepository
-		projectRepo     projectsvc.ProjectRepository
-		projectLikeRepo projectsvc.ProjectLikeRepository
-		userRepo        usersvc.UserRepository
+		mediaRepo        mediasvc.MediaRepository
+		postRepo         postsvc.PostRepository
+		postReactionRepo postsvc.PostReactionRepository
+		projectRepo      projectsvc.ProjectRepository
+		projectLikeRepo  projectsvc.ProjectLikeRepository
+		userRepo         usersvc.UserRepository
 
 		// search service
-		mediaSvc       mediasvc.MediaService
-		postSvc        postsvc.PostService
-		projectSvc     projectsvc.ProjectService
-		projectLikeSvc projectsvc.ProjectLikeService
-		userSvc        usersvc.UserService
+		mediaSvc        mediasvc.MediaService
+		postSvc         postsvc.PostService
+		postReactionSvc postsvc.PostReactionService
+		projectSvc      projectsvc.ProjectService
+		projectLikeSvc  projectsvc.ProjectLikeService
+		userSvc         usersvc.UserService
 	)
 	{
 		mediaRepo = mysql.NewMediaRepository(db, mediaR2Repo)
 		postRepo = mysql.NewPostRepository(db)
+		postReactionRepo = mysql.NewPostReactionRepository(db)
 		projectRepo = mysql.NewProjectRepository(db)
 		projectLikeRepo = mysql.NewProjectLikeRepository(db)
 		userRepo = mysql.NewUserRepository(db)
 
 		mediaSvc = mysql.NewMediaService(db, mediaR2Repo)
 		postSvc = mysql.NewPostService(db)
+		postReactionSvc = mysql.NewPostReactionService(db)
 		projectSvc = mysql.NewProjectService(db)
 		projectLikeSvc = mysql.NewProjectLikeService(db)
 		userSvc = mysql.NewUserService(db)
@@ -97,7 +101,7 @@ func main() {
 	)
 	{
 		mediaUcSvc = mediasvc.NewService(mediaRepo, mediaSvc)
-		postUcSvc = postsvc.NewService(postRepo, postSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo)
+		postUcSvc = postsvc.NewService(postRepo, postSvc, postReactionRepo, postReactionSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo)
 		projectUcSvc = projectsvc.NewService(projectRepo, projectSvc, projectR2Repo, projectLikeRepo, projectLikeSvc)
 		userUcSvc = usersvc.NewService(userRepo, userSvc)
 	}

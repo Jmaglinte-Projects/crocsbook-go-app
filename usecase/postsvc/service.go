@@ -33,12 +33,19 @@ type PostService interface {
 	ListPostStatsByProjectIds(ctx context.Context, cond post.ListPostStatsByProjectIdsCond, projectId ...post.ProjectID) ([]*ListPostStatsByProjectIds, error)
 }
 
+type PostReactionService interface {
+	List(ctx context.Context, cond post.ListPostReactionsCond) ([]*post.PostReactions, error)
+	Count(ctx context.Context, cond post.CountPostReactionsCond) (*uint64, error)
+}
+
 type Service interface {
 	ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut, error)
 	ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, error)
 	CreatePost(ctx context.Context, in *CreatePostIn) (*CreatePostOut, error)
 	UpdatePost(ctx context.Context, in *UpdatePostIn) (*UpdatePostOut, error)
 	RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePostOut, error)
+
+	ReactToPost(ctx context.Context, in *ReactToPostIn) (*ReactToPostOut, error)
 
 	ShowPostByProjectId(ctx context.Context, in *ShowPostByProjectIdIn) (*ShowPostByProjectIdOut, error)
 }
@@ -92,23 +99,35 @@ type ShowPostByProjectIdOut struct {
 	Total uint64
 }
 
-type service struct {
-	postRepo      PostRepository
-	postSvc       PostService
-	mediaRepo     mediasvc.MediaRepository
-	mediaSvc      mediasvc.MediaService
-	projectSvc    projectsvc.ProjectService
-	projectR2Repo projectsvc.ProjectR2Repository
+type ReactToPostIn struct {
+	PostID       post.PostID
+	UserID       string
+	ReactionType post.ReactionType
 }
 
-func NewService(postRepo PostRepository, postSvc PostService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService, projectSvc projectsvc.ProjectService, projectR2Repo projectsvc.ProjectR2Repository) Service {
+type ReactToPostOut struct{}
+
+type service struct {
+	postRepo         PostRepository
+	postSvc          PostService
+	postReactionRepo PostReactionRepository
+	postReactionSvc  PostReactionService
+	mediaRepo        mediasvc.MediaRepository
+	mediaSvc         mediasvc.MediaService
+	projectSvc       projectsvc.ProjectService
+	projectR2Repo    projectsvc.ProjectR2Repository
+}
+
+func NewService(postRepo PostRepository, postSvc PostService, postReactionRepo PostReactionRepository, postReactionSvc PostReactionService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService, projectSvc projectsvc.ProjectService, projectR2Repo projectsvc.ProjectR2Repository) Service {
 	return &service{
-		postRepo:      postRepo,
-		postSvc:       postSvc,
-		mediaRepo:     mediaRepo,
-		mediaSvc:      mediaSvc,
-		projectSvc:    projectSvc,
-		projectR2Repo: projectR2Repo,
+		postRepo:         postRepo,
+		postSvc:          postSvc,
+		postReactionRepo: postReactionRepo,
+		postReactionSvc:  postReactionSvc,
+		mediaRepo:        mediaRepo,
+		mediaSvc:         mediaSvc,
+		projectSvc:       projectSvc,
+		projectR2Repo:    projectR2Repo,
 	}
 }
 
@@ -250,6 +269,29 @@ func (s *service) RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePost
 	}
 
 	return &RemovePostOut{}, nil
+}
+
+func (s *service) ReactToPost(ctx context.Context, in *ReactToPostIn) (*ReactToPostOut, error) {
+	now := time.Now()
+
+	id, err := post.NewPostReactionID()
+	if err != nil {
+		return nil, err
+	}
+
+	entity := &post.PostReactions{}
+	entity.PostReactionID = id
+	entity.PostID = in.PostID
+	entity.UserID = in.UserID
+	entity.ReactionType = &in.ReactionType
+	entity.CreatedTime = now
+
+	err = s.postReactionRepo.Store(ctx, entity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ReactToPostOut{}, nil
 }
 
 func (s *service) ShowPostByProjectId(ctx context.Context, in *ShowPostByProjectIdIn) (*ShowPostByProjectIdOut, error) {
