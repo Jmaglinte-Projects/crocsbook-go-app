@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/protos";
+
+service AuthService {
+  // GoogleSignIn: frontend sends Google ID token (from GSI); backend verifies and returns app JWT.
+  rpc GoogleSignIn (GoogleSignInIn) returns (GoogleSignInOut);
+}
+
+message GoogleSignInIn {
+  string id_token = 1;
+}
+
+message GoogleSignInOut {
+  string token = 1;
+}

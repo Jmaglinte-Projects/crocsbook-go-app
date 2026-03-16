@@ -36,6 +36,7 @@ const (
 )
 
 type ListCond struct {
+	Email   *string
 	UserID  *UserID
 	UserIDs []UserID
 }

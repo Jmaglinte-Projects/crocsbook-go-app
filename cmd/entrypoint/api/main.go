@@ -14,6 +14,7 @@ import (
 	pb "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/lib"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/mysql"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/r2"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/authsvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/mediasvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/postsvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/projectsvc"
@@ -98,12 +99,27 @@ func main() {
 		postUcSvc    postsvc.Service
 		projectUcSvc projectsvc.Service
 		userUcSvc    usersvc.Service
+		authUcSvc    authsvc.Service
 	)
 	{
 		mediaUcSvc = mediasvc.NewService(mediaRepo, mediaSvc)
 		postUcSvc = postsvc.NewService(postRepo, postSvc, postReactionRepo, postReactionSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo)
 		projectUcSvc = projectsvc.NewService(projectRepo, projectSvc, projectR2Repo, projectLikeRepo, projectLikeSvc)
 		userUcSvc = usersvc.NewService(userRepo, userSvc)
+
+		// auth: frontend sends Google ID token (GSI), backend verifies and returns our JWT
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			jwtSecret = "change-me-in-production"
+		}
+		googleClientID := os.Getenv("GOOGLE_OAUTH_CLIENT_ID")
+		authUcSvc = authsvc.NewService(
+			jwtSecret,
+			24*time.Hour,
+			googleClientID,
+			userRepo,
+			userSvc,
+		)
 	}
 
 	var (
@@ -112,12 +128,14 @@ func main() {
 		postHandler    pb.PostServiceServer
 		projectHandler pb.ProjectServiceServer
 		userHandler    pb.UserServiceServer
+		authHandler    pb.AuthServiceServer
 	)
 	{
 		mediaHandler = grpc.NewMediaHandler(mediaUcSvc)
 		postHandler = grpc.NewPostHandler(postUcSvc)
 		projectHandler = grpc.NewProjectHandler(projectUcSvc)
 		userHandler = grpc.NewUserHandler(userUcSvc)
+		authHandler = grpc.NewAuthHandler(authUcSvc)
 	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", os.Getenv("GRPC_PORT")))
@@ -148,6 +166,7 @@ func main() {
 	pb.RegisterPostServiceServer(s, postHandler)
 	pb.RegisterProjectServiceServer(s, projectHandler)
 	pb.RegisterUserServiceServer(s, userHandler)
+	pb.RegisterAuthServiceServer(s, authHandler)
 
 	reflection.Register(s)
 

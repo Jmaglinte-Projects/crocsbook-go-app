@@ -23,6 +23,24 @@ func NewUserRepository(db *sql.DB) usersvc.UserRepository {
 	}
 }
 
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (*usersvc.ViewUser, error) {
+	stmt := table.Users.SELECT(table.Users.AllColumns).WHERE(
+		table.Users.Email.EQ(jet.String(email)))
+
+	dest := &UserModels{}
+	err := stmt.Query(r.db, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*dest) == 0 {
+		return nil, nil
+	}
+
+	out := dest.ViewUser()
+	return out[0], nil
+}
+
 func (r *userRepository) Find(ctx context.Context, id user.UserID) (*usersvc.ViewUser, error) {
 	stmt := table.Users.SELECT(table.Users.AllColumns).WHERE(
 		table.Users.UserID.EQ(jet.String(string(id))))
@@ -126,6 +144,10 @@ func (s *userService) List(ctx context.Context, cond user.ListCond, option users
 		pred = append(pred, table.Users.UserID.EQ(jet.String(string(*cond.UserID))))
 	}
 
+	if cond.Email != nil {
+		pred = append(pred, table.Users.Email.EQ(jet.String(*cond.Email)))
+	}
+
 	if len(cond.UserIDs) > 0 {
 		idExpressions := make([]jet.Expression, 0, len(cond.UserIDs))
 
@@ -185,6 +207,10 @@ func (s *userService) Count(ctx context.Context, cond user.CountCond, option use
 
 	if cond.UserID != nil {
 		pred = append(pred, table.Users.UserID.EQ(jet.String(string(*cond.UserID))))
+	}
+
+	if cond.Email != nil {
+		pred = append(pred, table.Users.Email.EQ(jet.String(*cond.Email)))
 	}
 
 	if len(cond.UserIDs) > 0 {
