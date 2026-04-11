@@ -368,9 +368,14 @@ func (s *service) setMedia(ctx context.Context, entities ...*ViewPost) error {
 }
 
 func (s *service) setProject(ctx context.Context, entities ...*ViewPost) error {
-	projectIDs := []project.ProjectID{}
+	unique := make(map[project.ProjectID]struct{}, len(entities))
 	for _, entity := range entities {
-		projectIDs = append(projectIDs, project.ProjectID(entity.PostProjectID))
+		id := project.ProjectID(entity.PostProjectID)
+		unique[id] = struct{}{}
+	}
+	projectIDs := make([]project.ProjectID, 0, len(unique))
+	for id := range unique {
+		projectIDs = append(projectIDs, id)
 	}
 
 	projectCond := &project.ListCond{
@@ -405,9 +410,14 @@ func (s *service) setProject(ctx context.Context, entities ...*ViewPost) error {
 }
 
 func (s *service) setPostStatsByProjectIds(ctx context.Context, entities ...*ViewPost) error {
-	projectIDs := []post.ProjectID{}
+	unique := make(map[post.ProjectID]struct{}, len(entities))
 	for _, entity := range entities {
-		projectIDs = append(projectIDs, post.ProjectID(entity.PostProjectID))
+		id := post.ProjectID(entity.PostProjectID)
+		unique[id] = struct{}{}
+	}
+	projectIDs := make([]post.ProjectID, 0, len(unique))
+	for id := range unique {
+		projectIDs = append(projectIDs, id)
 	}
 
 	cond := &post.ListPostStatsByProjectIdsCond{}

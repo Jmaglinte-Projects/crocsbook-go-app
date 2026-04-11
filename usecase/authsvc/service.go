@@ -28,7 +28,7 @@ type GoogleSignInIn struct {
 }
 
 type GoogleSignInOut struct {
-	Token string
+	JwtToken string
 }
 
 type service struct {
@@ -89,7 +89,7 @@ func (s *service) GoogleSignIn(ctx context.Context, in *GoogleSignInIn) (*Google
 		return nil, fmt.Errorf("sign jwt: %w", err)
 	}
 
-	return &GoogleSignInOut{Token: token}, nil
+	return &GoogleSignInOut{JwtToken: token}, nil
 }
 
 // verifyGoogleIDToken calls Google's tokeninfo endpoint and validates aud/iss/exp, returns claims or error.
@@ -197,6 +197,30 @@ func (s *service) signJWT(userID user.UserID) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.jwtSecret))
+}
+
+// ParseUserIDFromJWT verifies an HS256 JWT signed with the same secret as NewService and returns the user id from the `sub` claim.
+func ParseUserIDFromJWT(secret, tokenString string) (user.UserID, error) {
+	if secret == "" {
+		return "", errors.New("authsvc: empty jwt secret")
+	}
+	tok, err := jwt.ParseWithClaims(tokenString, &jwtClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if t.Method != jwt.SigningMethodHS256 {
+			return nil, fmt.Errorf("unexpected signing method %v", t.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return "", err
+	}
+	claims, ok := tok.Claims.(*jwtClaims)
+	if !ok || !tok.Valid {
+		return "", errors.New("invalid token")
+	}
+	if claims.UserID == "" {
+		return "", errors.New("missing sub")
+	}
+	return user.UserID(claims.UserID), nil
 }
 
 // GoogleUserInfo from verified ID token (or userinfo).

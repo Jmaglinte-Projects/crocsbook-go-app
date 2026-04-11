@@ -14,5 +14,5 @@ message GoogleSignInIn {
 }
 
 message GoogleSignInOut {
-  string token = 1;
+  string jwt_token = 1;
 }

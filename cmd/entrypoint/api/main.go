@@ -100,6 +100,7 @@ func main() {
 		projectUcSvc projectsvc.Service
 		userUcSvc    usersvc.Service
 		authUcSvc    authsvc.Service
+		jwtSecret    string
 	)
 	{
 		mediaUcSvc = mediasvc.NewService(mediaRepo, mediaSvc)
@@ -108,14 +109,15 @@ func main() {
 		userUcSvc = usersvc.NewService(userRepo, userSvc)
 
 		// auth: frontend sends Google ID token (GSI), backend verifies and returns our JWT
-		jwtSecret := os.Getenv("JWT_SECRET")
+		jwtSecret = os.Getenv("JWT_SECRET")
 		if jwtSecret == "" {
 			jwtSecret = "change-me-in-production"
 		}
 		googleClientID := os.Getenv("GOOGLE_OAUTH_CLIENT_ID")
+		jwtExpiration := 24 * time.Hour
 		authUcSvc = authsvc.NewService(
 			jwtSecret,
-			24*time.Hour,
+			jwtExpiration,
 			googleClientID,
 			userRepo,
 			userSvc,
@@ -159,7 +161,7 @@ func main() {
 		opts = append(opts, grpc2.Creds(creds))
 	}
 
-	// opts = append(opts, grpc2.UnaryInterceptor(interceptor.AuthInterceptor))
+	opts = append(opts, grpc2.UnaryInterceptor(grpc.UnaryAuthInterceptor(jwtSecret)))
 
 	s := grpc2.NewServer(opts...)
 	pb.RegisterMediaServiceServer(s, mediaHandler)

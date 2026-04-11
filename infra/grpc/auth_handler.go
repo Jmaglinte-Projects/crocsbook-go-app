@@ -23,5 +23,5 @@ func (s *authServer) GoogleSignIn(ctx context.Context, req *pb.GoogleSignInIn) (
 	if err != nil {
 		return nil, err
 	}
-	return &pb.GoogleSignInOut{Token: out.Token}, nil
+	return &pb.GoogleSignInOut{JwtToken: out.JwtToken}, nil
 }
