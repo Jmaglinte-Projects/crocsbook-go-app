@@ -274,6 +274,21 @@ func (s *service) RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePost
 func (s *service) ReactToPost(ctx context.Context, in *ReactToPostIn) (*ReactToPostOut, error) {
 	now := time.Now()
 
+	hasReacted, err := s.userHasReactedToPost(ctx, in.UserID, in.PostID)
+	fmt.Println("hasReacted:", hasReacted)
+	if err != nil {
+		return nil, err
+	}
+	if hasReacted {
+		err = s.unReactToPost(ctx, in.UserID, in.PostID)
+		fmt.Println("unReactToPost step 0")
+		if err != nil {
+			fmt.Println("Error unreacting to post:", err)
+			return nil, err
+		}
+		return &ReactToPostOut{}, nil
+	}
+
 	id, err := post.NewPostReactionID()
 	if err != nil {
 		return nil, err
@@ -286,8 +301,12 @@ func (s *service) ReactToPost(ctx context.Context, in *ReactToPostIn) (*ReactToP
 	entity.ReactionType = &in.ReactionType
 	entity.CreatedTime = now
 
+	b, _ := json.MarshalIndent(entity, "", "  ")
+	fmt.Println("ReactToPost entity:", string(b))
+
 	err = s.postReactionRepo.Store(ctx, entity)
 	if err != nil {
+		fmt.Println("Error storing post reaction:", err)
 		return nil, err
 	}
 
@@ -321,6 +340,43 @@ func (s *service) ShowPostByProjectId(ctx context.Context, in *ShowPostByProject
 		Items: entities,
 		Total: uint64(len(entities)),
 	}, nil
+}
+
+func (s *service) unReactToPost(ctx context.Context, userID string, postID post.PostID) error {
+	cond := &post.ListPostReactionsCond{
+		UserID: &userID,
+		PostID: &postID,
+	}
+	entities, err := s.postReactionSvc.List(ctx, *cond)
+	if err != nil {
+		return err
+	}
+	if len(entities) == 0 {
+		return errors.New("user has not reacted to this post")
+	}
+
+	fmt.Println("unReactToPost step 1")
+	b, _ := json.MarshalIndent(entities[0], "", "  ")
+	fmt.Println("unReactToPost entities:", string(b))
+
+	err = s.postReactionRepo.Remove(ctx, entities[0].PostReactionID)
+	fmt.Println("unReactToPost step 2")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) userHasReactedToPost(ctx context.Context, userID string, postID post.PostID) (bool, error) {
+	cond := &post.ListPostReactionsCond{
+		UserID: &userID,
+		PostID: &postID,
+	}
+	entities, err := s.postReactionSvc.List(ctx, *cond)
+	if err != nil {
+		return false, err
+	}
+	return len(entities) > 0, nil
 }
 
 func (s *service) createMedia(ctx context.Context, in *mediasvc.CreateMediaIn) (*mediasvc.CreateMediaOut, error) {

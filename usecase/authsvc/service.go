@@ -182,7 +182,7 @@ func stringPtr(s string) *string {
 
 type jwtClaims struct {
 	jwt.RegisteredClaims
-	UserID string `json:"sub"`
+	UserID string `json:"user_id"`
 }
 
 func (s *service) signJWT(userID user.UserID) (string, error) {

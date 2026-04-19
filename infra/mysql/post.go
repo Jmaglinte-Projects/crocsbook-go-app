@@ -205,10 +205,57 @@ func (r *postReactionRepository) Find(ctx context.Context, id post.PostReactionI
 }
 
 func (r *postReactionRepository) Store(ctx context.Context, entity *post.PostReactions) error {
+	reactionType := model.PostReactionsReactionType(*entity.ReactionType)
+	m := model.PostReactions{}
+	m.PostReactionID = string(entity.PostReactionID)
+	m.PostID = string(entity.PostID)
+	m.UserID = string(entity.UserID)
+	m.ReactionType = &reactionType
+	m.CreatedTime = entity.CreatedTime
+
+	insertStmt := table.PostReactions.INSERT(table.PostReactions.AllColumns).MODEL(m)
+	updateStmt := table.PostReactions.UPDATE(table.PostReactions.AllColumns).MODEL(m)
+	updateStmt = updateStmt.WHERE(table.PostReactions.PostReactionID.EQ(jet.String(string(entity.PostReactionID))))
+
+	_, err := insertStmt.Exec(r.db)
+	if err != nil {
+		if mysqlerr, ok := err.(*mysql.MySQLError); ok {
+			switch mysqlerr.Number {
+			case 1062:
+				result, err := updateStmt.Exec(r.db)
+				if err != nil {
+					return err
+				}
+				rowsAffected, err := result.RowsAffected()
+				if err != nil {
+					return err
+				}
+				if rowsAffected == 0 {
+					return fmt.Errorf("entity version conflicted")
+				}
+			default:
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (r *postReactionRepository) Remove(ctx context.Context, ids ...post.PostReactionID) error {
+	idExpressions := make([]jet.Expression, 0, len(ids))
+	for _, id := range ids {
+		idExpressions = append(idExpressions, jet.String(string(id)))
+	}
+
+	stmt := table.PostReactions.DELETE().WHERE(table.PostReactions.PostReactionID.IN(idExpressions...))
+	_, err := stmt.Exec(r.db)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -225,14 +272,18 @@ func NewPostService(db *sql.DB) postsvc.PostService {
 func (s *postService) List(ctx context.Context, cond post.ListCond) ([]*postsvc.ViewPost, error) {
 	postReactionSubQuery := jet.SELECT(table.PostReactions.PostID, jet.COUNT(table.PostReactions.PostID).AS("post_reaction_count")).FROM(table.PostReactions).GROUP_BY(table.PostReactions.PostID).AsTable("pr")
 
+	prPred := []jet.BoolExpression{
+		table.PostReactions.PostID.EQ(table.Posts.PostID),
+	}
+	if cond.UserID != nil {
+		prPred = append(prPred, table.PostReactions.UserID.EQ(jet.String(string(*cond.UserID))))
+	}
+
 	pr := table.PostReactions
 	hasReactedExists := jet.EXISTS(
 		jet.SELECT(jet.Int(1)).
 			FROM(pr).
-			WHERE(
-				pr.PostID.EQ(table.Posts.PostID).
-					AND(pr.UserID.EQ(table.Projects.ProjectUserID)),
-			),
+			WHERE(jet.AND(prPred...)),
 	).AS("has_reacted")
 
 	stmt := table.Posts.

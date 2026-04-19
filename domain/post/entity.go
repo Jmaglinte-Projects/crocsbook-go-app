@@ -69,6 +69,7 @@ const (
 )
 
 type ListCond struct {
+	UserID         *string
 	PostID         *PostID
 	PostIDs        []PostID
 	PostProjectID  *ProjectID

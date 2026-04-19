@@ -8,6 +8,8 @@ import (
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
 	pb "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/lib"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/postsvc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -114,6 +116,32 @@ func (s *postServer) RemovePost(ctx context.Context, req *pb.RemovePostIn) (*pb.
 	}
 
 	return &pb.RemovePostOut{}, nil
+}
+
+func (s *postServer) ReactToPost(ctx context.Context, req *pb.ReactToPostIn) (*pb.ReactToPostOut, error) {
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		fmt.Println("ReactToPost user ID not found")
+		return nil, status.Error(codes.Unauthenticated, "user ID not found")
+	}
+
+	reactionType := postReactionTypeToEntity(req.ReactionType)
+
+	in := &postsvc.ReactToPostIn{
+		PostID:       post.PostID(req.PostId),
+		UserID:       string(userID),
+		ReactionType: reactionType,
+	}
+
+	b, _ := json.MarshalIndent(in, "", "  ")
+	fmt.Println("ReactToPost in:", string(b))
+
+	_, err := s.svc.ReactToPost(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ReactToPostOut{}, nil
 }
 
 func (s *postServer) ShowPostByProjectId(ctx context.Context, req *pb.ShowPostByProjectIdIn) (*pb.ShowPostByProjectIdOut, error) {
@@ -232,6 +260,17 @@ func postVisibilityToEntity(v pb.PostVisibility) post.Visibility {
 		return post.Visibility_Public
 	case pb.PostVisibility_PostVisibility_Private:
 		return post.Visibility_Private
+	default:
+		return ""
+	}
+}
+
+func postReactionTypeToEntity(v pb.PostReactionType) post.ReactionType {
+	switch v {
+	case pb.PostReactionType_PostReactionType_Like:
+		return post.ReactionType_Like
+	case pb.PostReactionType_PostReactionType_Heart:
+		return post.ReactionType_Heart
 	default:
 		return ""
 	}

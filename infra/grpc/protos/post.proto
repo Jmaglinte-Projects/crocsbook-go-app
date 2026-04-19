@@ -13,6 +13,8 @@ service PostService {
   rpc UpdatePost (UpdatePostIn) returns (UpdatePostOut);
   rpc RemovePost (RemovePostIn) returns (RemovePostOut);
 
+  rpc ReactToPost (ReactToPostIn) returns (ReactToPostOut);
+
   rpc ShowPostByProjectId (ShowPostByProjectIdIn) returns (ShowPostByProjectIdOut);
 }
 
@@ -56,6 +58,13 @@ message RemovePostIn {
 }
 message RemovePostOut {}
 
+message ReactToPostIn {
+  string post_id = 1;
+  string user_id = 2;
+  PostReactionType reaction_type = 3;
+}
+message ReactToPostOut {}
+
 
 message ShowPostByProjectIdIn {
   string project_id = 1;
@@ -78,6 +87,11 @@ message PostFilter {
 enum PostSortKey {
   PostSortKey_CreatedTime_ASC = 0;
   PostSortKey_CreatedTime_DESC = 1;
+}
+
+enum PostReactionType {
+  PostReactionType_Like = 0;
+  PostReactionType_Heart = 1;
 }
 
 message Post {
