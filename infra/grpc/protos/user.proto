@@ -40,8 +40,11 @@ message UpdateUserIn {
   string user_id = 1;
 
   string email = 2;
-  Gender gender = 3;
-  string nickname = 4;
+  string password = 3;
+  Gender gender = 4;
+  string nickname = 5;
+  
+  bytes image_data = 6;
 }
 message UpdateUserOut {}
 

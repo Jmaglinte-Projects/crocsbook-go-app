@@ -3,15 +3,25 @@ package usersvc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/user"
+	"github.com/gabriel-vasile/mimetype"
 )
 
 type UserRepository interface {
 	Find(ctx context.Context, id user.UserID) (*ViewUser, error)
 	Store(ctx context.Context, entity *user.User) error
 	Remove(ctx context.Context, ids ...user.UserID) error
+}
+
+type UserR2Repository interface {
+	// Find returns a presigned URL for the object at key (for frontend display).
+	// TODO: use public domain URL instead of presigned URL
+	Find(ctx context.Context, key string) (string, error)
+	Store(ctx context.Context, entity *user.User) error
+	Remove(ctx context.Context, keys ...string) error
 }
 
 type UserService interface {
@@ -68,8 +78,11 @@ type UpdateUserIn struct {
 	UserID user.UserID
 
 	Email    string
+	Password *string
 	Gender   user.Gender
 	Nickname *string
+
+	ImageData []byte
 }
 type UpdateUserOut struct{}
 
@@ -79,14 +92,16 @@ type RemoveUserIn struct {
 type RemoveUserOut struct{}
 
 type service struct {
-	userRepo UserRepository
-	userSvc  UserService
+	userRepo   UserRepository
+	userSvc    UserService
+	userR2Repo UserR2Repository
 }
 
-func NewService(userRepo UserRepository, userSvc UserService) Service {
+func NewService(userRepo UserRepository, userSvc UserService, userR2Repo UserR2Repository) Service {
 	return &service{
-		userRepo: userRepo,
-		userSvc:  userSvc,
+		userRepo:   userRepo,
+		userSvc:    userSvc,
+		userR2Repo: userR2Repo,
 	}
 }
 
@@ -162,8 +177,27 @@ func (s *service) UpdateUser(ctx context.Context, in *UpdateUserIn) (*UpdateUser
 
 	entity.Email = in.Email
 	entity.Gender = in.Gender
-	entity.Nickname = in.Nickname
+	if in.Nickname != nil {
+		entity.Nickname = in.Nickname
+	}
+	if in.Password != nil {
+		entity.Password = in.Password
+	}
 	entity.UpdatedTime = &now
+
+	if len(in.ImageData) > 0 {
+		mt := mimetype.Detect(in.ImageData)
+		imageSet := &user.ImageSet{
+			ContentType: mt.String(),
+			Content:     in.ImageData,
+		}
+		entity.ImageSet = imageSet
+
+		if err = s.userR2Repo.Store(ctx, &entity.User); err != nil {
+			fmt.Println("Error storing image to r2")
+			return nil, err
+		}
+	}
 
 	err = s.userRepo.Store(ctx, &entity.User)
 	if err != nil {

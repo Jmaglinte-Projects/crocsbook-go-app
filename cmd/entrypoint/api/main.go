@@ -50,14 +50,14 @@ func main() {
 	var (
 		mediaR2Repo   mediasvc.MediaR2Repository
 		projectR2Repo projectsvc.ProjectR2Repository
+		userR2Repo    usersvc.UserR2Repository
 	)
 	{
-		fmt.Println("---------R2 BUCKET NAME------------")
 		bucketName := os.Getenv("R2_BUCKET_NAME")
-		fmt.Println("--------------------------------")
 
 		mediaR2Repo = r2.NewMediaR2Repository(r2Client, bucketName)
 		projectR2Repo = r2.NewProjectR2Repository(r2Client, bucketName)
+		userR2Repo = r2.NewUserR2Repository(r2Client, bucketName)
 	}
 
 	var (
@@ -106,7 +106,7 @@ func main() {
 		mediaUcSvc = mediasvc.NewService(mediaRepo, mediaSvc)
 		postUcSvc = postsvc.NewService(postRepo, postSvc, postReactionRepo, postReactionSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo)
 		projectUcSvc = projectsvc.NewService(projectRepo, projectSvc, projectR2Repo, projectLikeRepo, projectLikeSvc)
-		userUcSvc = usersvc.NewService(userRepo, userSvc)
+		userUcSvc = usersvc.NewService(userRepo, userSvc, userR2Repo)
 
 		// auth: frontend sends Google ID token (GSI), backend verifies and returns our JWT
 		jwtSecret = os.Getenv("JWT_SECRET")

@@ -20,7 +20,7 @@ type usersTable struct {
 	UserID      mysql.ColumnString
 	Email       mysql.ColumnString
 	Gender      mysql.ColumnString
-	ProfileURL  mysql.ColumnString
+	ProfileKey  mysql.ColumnString
 	Nickname    mysql.ColumnString
 	Username    mysql.ColumnString
 	Password    mysql.ColumnString
@@ -70,14 +70,14 @@ func newUsersTableImpl(schemaName, tableName, alias string) usersTable {
 		UserIDColumn      = mysql.StringColumn("user_id")
 		EmailColumn       = mysql.StringColumn("email")
 		GenderColumn      = mysql.StringColumn("gender")
-		ProfileURLColumn  = mysql.StringColumn("profile_url")
+		ProfileKeyColumn  = mysql.StringColumn("profile_key")
 		NicknameColumn    = mysql.StringColumn("nickname")
 		UsernameColumn    = mysql.StringColumn("username")
 		PasswordColumn    = mysql.StringColumn("password")
 		CreatedTimeColumn = mysql.TimestampColumn("created_time")
 		UpdatedTimeColumn = mysql.TimestampColumn("updated_time")
-		allColumns        = mysql.ColumnList{UserIDColumn, EmailColumn, GenderColumn, ProfileURLColumn, NicknameColumn, UsernameColumn, PasswordColumn, CreatedTimeColumn, UpdatedTimeColumn}
-		mutableColumns    = mysql.ColumnList{EmailColumn, GenderColumn, ProfileURLColumn, NicknameColumn, UsernameColumn, PasswordColumn, CreatedTimeColumn, UpdatedTimeColumn}
+		allColumns        = mysql.ColumnList{UserIDColumn, EmailColumn, GenderColumn, ProfileKeyColumn, NicknameColumn, UsernameColumn, PasswordColumn, CreatedTimeColumn, UpdatedTimeColumn}
+		mutableColumns    = mysql.ColumnList{EmailColumn, GenderColumn, ProfileKeyColumn, NicknameColumn, UsernameColumn, PasswordColumn, CreatedTimeColumn, UpdatedTimeColumn}
 		defaultColumns    = mysql.ColumnList{EmailColumn, GenderColumn, CreatedTimeColumn}
 	)
 
@@ -88,7 +88,7 @@ func newUsersTableImpl(schemaName, tableName, alias string) usersTable {
 		UserID:      UserIDColumn,
 		Email:       EmailColumn,
 		Gender:      GenderColumn,
-		ProfileURL:  ProfileURLColumn,
+		ProfileKey:  ProfileKeyColumn,
 		Nickname:    NicknameColumn,
 		Username:    UsernameColumn,
 		Password:    PasswordColumn,

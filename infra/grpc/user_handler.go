@@ -72,7 +72,16 @@ func (s *userServer) CreateUser(ctx context.Context, req *pb.CreateUserIn) (*pb.
 }
 
 func (s *userServer) UpdateUser(ctx context.Context, req *pb.UpdateUserIn) (*pb.UpdateUserOut, error) {
-	in := &usersvc.UpdateUserIn{}
+	password := req.GetPassword()
+	nickname := req.GetNickname()
+	in := &usersvc.UpdateUserIn{
+		UserID:    user.UserID(req.GetUserId()),
+		Email:     req.GetEmail(),
+		Password:  &password,
+		Gender:    userGenderToEntity(req.GetGender()),
+		Nickname:  &nickname,
+		ImageData: req.GetImageData(),
+	}
 
 	_, err := s.svc.UpdateUser(ctx, in)
 	if err != nil {
@@ -123,5 +132,16 @@ func userGenderToProto(g user.Gender) pb.Gender {
 		return pb.Gender_GENDER_FEMALE
 	default:
 		return pb.Gender_GENDER_UNSPECIFIED
+	}
+}
+
+func userGenderToEntity(g pb.Gender) user.Gender {
+	switch g {
+	case pb.Gender_GENDER_MALE:
+		return user.Gender_Male
+	case pb.Gender_GENDER_FEMALE:
+		return user.Gender_Female
+	default:
+		return ""
 	}
 }

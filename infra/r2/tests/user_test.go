@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/media"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/user"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/r2"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/stretchr/testify/assert"
@@ -27,17 +27,16 @@ import (
 
 /*
 How to run the tests:
-go test -v ./infra/r2/tests/ -run TestMediaRepository_Store
 go test -v ./infra/r2/tests/ -run TestMediaRepository_Find
-go test -v ./infra/r2/tests/ -run TestUserRepository
+go test -v ./infra/r2/tests/ -run TestMediaRepository_Store
 */
 
-func TestMediaRepository_Store(t *testing.T) {
+func TestUserRepository_Store(t *testing.T) {
 	client, bucketName := setupR2Client(t)
-	repo := r2.NewMediaR2Repository(client, bucketName)
+	repo := r2.NewUserR2Repository(client, bucketName)
 
 	ctx := context.Background()
-	id, err := media.NewMediaID()
+	id, err := user.NewUserID()
 	require.NoError(t, err)
 
 	content, err := os.ReadFile("saitama.webp")
@@ -46,49 +45,51 @@ func TestMediaRepository_Store(t *testing.T) {
 	mt := mimetype.Detect(content)
 	fmt.Println(mt.String())
 
-	entity := &media.Media{
-		MediaID:     id,
-		MediaPostID: "test-post-id",
+	entity := &user.User{
+		UserID:      id,
+		Email:       "test@mail.com",
+		Gender:      user.Gender_Male,
 		CreatedTime: time.Now(),
-		MediaSet: media.MediaSet{
+		ImageSet: &user.ImageSet{
 			ContentType: mt.String(),
 			Content:     content,
 		},
 	}
 
 	err = repo.Store(ctx, entity)
-	fmt.Println(entity.ObjectKey)
+	fmt.Println(entity.ProfileKey)
 	assert.NoError(t, err)
-	assert.NotNil(t, entity.ObjectKey)
+	assert.NotNil(t, entity.ProfileKey)
 }
 
-func TestMediaRepository_Find(t *testing.T) {
+func TestUserRepository_Find(t *testing.T) {
 	client, bucketName := setupR2Client(t)
-	repo := r2.NewMediaR2Repository(client, bucketName)
+	repo := r2.NewUserR2Repository(client, bucketName)
 
 	ctx := context.Background()
 
 	// Store an object first so we have a key to Find
-	id, err := media.NewMediaID()
+	id, err := user.NewUserID()
 	require.NoError(t, err)
 	content, err := os.ReadFile("saitama.webp")
 	require.NoError(t, err)
 	mt := mimetype.Detect(content)
-	entity := &media.Media{
-		MediaID:     id,
-		MediaPostID: "test-post-id",
+	entity := &user.User{
+		UserID:      id,
+		Email:       "test@mail.com",
+		Gender:      user.Gender_Male,
 		CreatedTime: time.Now(),
-		MediaSet: media.MediaSet{
+		ImageSet: &user.ImageSet{
 			ContentType: mt.String(),
 			Content:     content,
 		},
 	}
 	err = repo.Store(ctx, entity)
 	require.NoError(t, err)
-	require.NotEmpty(t, entity.ObjectKey, "Store should set ObjectKey")
+	require.NotEmpty(t, entity.ProfileKey, "Store should set ProfileKey")
 
 	// Find returns a presigned URL for the object
-	url, err := repo.Find(ctx, entity.ObjectKey)
+	url, err := repo.Find(ctx, *entity.ProfileKey)
 	require.NoError(t, err)
 
 	// Assert it looks like a URL (presigned URLs are https and have query params)

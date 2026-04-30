@@ -10,12 +10,15 @@ type User struct {
 	UserID      UserID
 	Email       string
 	Gender      Gender
-	ProfileURL  *string
+	ProfileKey  *string
 	Nickname    *string
 	Username    *string
 	Password    *string
 	CreatedTime time.Time
 	UpdatedTime *time.Time
+
+	ProfileURL *string
+	ImageSet   *ImageSet
 }
 
 type UserID string
@@ -34,6 +37,11 @@ const (
 	Gender_Male   Gender = "Male"
 	Gender_Female Gender = "Female"
 )
+
+type ImageSet struct {
+	ContentType string
+	Content     []byte
+}
 
 type ListCond struct {
 	Email   *string

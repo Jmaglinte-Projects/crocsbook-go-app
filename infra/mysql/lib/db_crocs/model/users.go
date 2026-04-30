@@ -15,7 +15,7 @@ type Users struct {
 	UserID      string `sql:"primary_key"`
 	Email       string
 	Gender      string
-	ProfileURL  *string
+	ProfileKey  *string
 	Nickname    *string
 	Username    *string
 	Password    *string
