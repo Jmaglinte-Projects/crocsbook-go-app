@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/media"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/infra/mysql/lib/db_crocs/model"
@@ -198,9 +199,9 @@ func (s *mediaService) List(ctx context.Context, cond media.ListCond, option med
 	if s.mediaR2Repo != nil {
 		for _, item := range out {
 			if item.ObjectKey != "" {
-				if url, err := s.mediaR2Repo.Find(ctx, item.ObjectKey); err == nil {
-					item.PresignedURL = url
-				}
+				// if url, err := s.mediaR2Repo.Find(ctx, item.ObjectKey);
+				url := fmt.Sprintf("%s/%s", os.Getenv("R2_PUBLIC_BASE_URL"), item.ObjectKey)
+				item.PresignedURL = url
 			}
 		}
 	}

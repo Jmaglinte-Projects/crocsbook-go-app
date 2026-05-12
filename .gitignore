@@ -1,2 +1,10 @@
 /node_modules
 /infra/grpc/lib
+
+
+.git
+.gitignore
+.env
+.env.*
+tmp
+bin

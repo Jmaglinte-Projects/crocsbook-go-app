@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/user"
 	"github.com/gabriel-vasile/mimetype"
 )
 
@@ -71,7 +72,9 @@ type Service interface {
 	CheckProjectLiked(ctx context.Context, in *CheckProjectLikedIn) (*CheckProjectLikedOut, error)
 }
 
-type ShowProjectsIn struct{}
+type ShowProjectsIn struct {
+	UserID user.UserID
+}
 type ShowProjectsOut struct {
 	Items []*ViewProject
 	Total uint64
@@ -160,10 +163,13 @@ func NewService(projectRepo ProjectRepository, projectSvc ProjectService, projec
 }
 
 func (s *service) ShowProjects(ctx context.Context, in *ShowProjectsIn) (*ShowProjectsOut, error) {
-	cond := &project.ListCond{}
 	opt := &ListOption{}
 
-	entities, err := s.projectSvc.List(ctx, *cond, *opt)
+	fmt.Println("--------------------------------")
+	fmt.Println("in.UserID: ", string(in.UserID))
+	fmt.Println("--------------------------------")
+	userID := project.UserID(in.UserID)
+	entities, err := s.projectSvc.List(ctx, project.ListCond{ProjectUserID: &userID}, *opt)
 	if err != nil {
 		return nil, err
 	}

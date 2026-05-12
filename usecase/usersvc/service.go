@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/user"
@@ -136,6 +137,8 @@ func (s *service) ShowUser(ctx context.Context, in *ShowUserIn) (*ShowUserOut, e
 		return nil, errors.New("User not found")
 	}
 
+	s.setProfileUrl(entity)
+
 	return &ShowUserOut{Item: entity}, nil
 }
 
@@ -212,6 +215,13 @@ func (s *service) RemoveUser(ctx context.Context, in *RemoveUserIn) (*RemoveUser
 	}
 
 	return &RemoveUserOut{}, nil
+}
+
+func (s *service) setProfileUrl(entity *ViewUser) {
+	if entity.User.ProfileKey != nil {
+		url := fmt.Sprintf("%s/%s", os.Getenv("R2_PUBLIC_BASE_URL"), *entity.User.ProfileKey)
+		entity.User.ProfileURL = &url
+	}
 }
 
 type ViewUser struct {

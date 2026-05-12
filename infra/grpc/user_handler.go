@@ -42,7 +42,9 @@ func (s *userServer) ShowUsers(ctx context.Context, req *pb.ShowUsersIn) (*pb.Sh
 }
 
 func (s *userServer) ShowUser(ctx context.Context, req *pb.ShowUserIn) (*pb.ShowUserOut, error) {
-	in := &usersvc.ShowUserIn{}
+	in := &usersvc.ShowUserIn{
+		UserID: user.UserID(req.GetUserId()),
+	}
 
 	user, err := s.svc.ShowUser(ctx, in)
 	if err != nil {

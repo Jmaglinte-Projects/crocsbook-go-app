@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/user"
 	pb "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/lib"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/postsvc"
 	"google.golang.org/grpc/codes"
@@ -240,6 +241,40 @@ func (dest *Post) UnmarshalOriginal(src *postsvc.ViewPost) {
 				ThumbnailUrl: m.PresignedURL,
 			})
 		}
+	}
+
+	if src.User != nil {
+		dest.User = &pb.Post_User{}
+		dest.User.UserId = string(src.User.UserID)
+		dest.User.Email = src.User.Email
+		dest.User.Gender = post_userGenderToProto(src.User.Gender)
+
+		if src.User.ProfileURL != nil {
+			dest.User.ProfileUrl = *src.User.ProfileURL
+		}
+		if src.User.Nickname != nil {
+			dest.User.Nickname = *src.User.Nickname
+		}
+		if src.User.Username != nil {
+			dest.User.Username = *src.User.Username
+		}
+
+		dest.User.CreatedTime = timestamppb.New(src.User.CreatedTime)
+
+		if src.User.UpdatedTime != nil {
+			dest.User.UpdatedTime = timestamppb.New(*src.User.UpdatedTime)
+		}
+	}
+}
+
+func post_userGenderToProto(g user.Gender) pb.Post_User_Gender {
+	switch g {
+	case user.Gender_Male:
+		return pb.Post_User_Gender_GENDER_MALE
+	case user.Gender_Female:
+		return pb.Post_User_Gender_GENDER_FEMALE
+	default:
+		return pb.Post_User_Gender_GENDER_UNSPECIFIED
 	}
 }
 

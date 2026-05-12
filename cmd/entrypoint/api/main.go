@@ -32,13 +32,13 @@ import (
 
 func main() {
 	if err := loadEnv(); err != nil {
-		log.Fatal("Error loading .env file")
+		log.Printf("Warning: .env file not loaded, using environment variables: %v", err)
 	}
 
 	//mysql
 	db, err := NewMySQLConnection()
 	if err != nil {
-		log.Fatal("Error connecting to mysql")
+		log.Fatalf("Error connecting to mysql: %v", err)
 	}
 
 	r2Client, err := NewR2Client(context.Background())
@@ -104,7 +104,7 @@ func main() {
 	)
 	{
 		mediaUcSvc = mediasvc.NewService(mediaRepo, mediaSvc)
-		postUcSvc = postsvc.NewService(postRepo, postSvc, postReactionRepo, postReactionSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo)
+		postUcSvc = postsvc.NewService(postRepo, postSvc, postReactionRepo, postReactionSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo, userSvc)
 		projectUcSvc = projectsvc.NewService(projectRepo, projectSvc, projectR2Repo, projectLikeRepo, projectLikeSvc)
 		userUcSvc = usersvc.NewService(userRepo, userSvc, userR2Repo)
 
@@ -183,7 +183,7 @@ func main() {
 func NewMySQLConnection() (*sql.DB, error) {
 	port, err := strconv.Atoi(os.Getenv("MYSQL_PORT"))
 	if err != nil {
-		log.Fatal("Error converting MYSQL_PORT to int")
+		return nil, fmt.Errorf("invalid MYSQL_PORT: %w", err)
 	}
 
 	sqlsec := mysql.Secret{
@@ -204,12 +204,12 @@ func NewMySQLConnection() (*sql.DB, error) {
 	dsn := sqlconf.FormatDSN()
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		log.Fatal("Error opening mysql connection")
+		return nil, fmt.Errorf("open mysql connection: %w", err)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatal("Error pinging mysql connection")
+		return nil, fmt.Errorf("ping mysql connection: %w", err)
 	}
 
 	return db, nil

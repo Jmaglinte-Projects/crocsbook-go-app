@@ -108,6 +108,8 @@ message Post {
 	google.protobuf.Timestamp last_post_time = 10;
   uint64 post_reaction_count = 11;
   bool has_reacted = 12;
+
+  Post_User user = 13;
 }
  
 message Post_Project {
@@ -133,6 +135,25 @@ message Post_Media {
   google.protobuf.Timestamp created_time = 5;
 
   string thumbnail_url = 6;
+}
+
+message Post_User {
+  string user_id = 1;
+  string email = 2;
+  Post_User_Gender gender = 3;
+  string profile_url = 4;
+  string nickname = 5;
+  string username = 6;
+  
+  google.protobuf.Timestamp created_time = 8;
+  google.protobuf.Timestamp updated_time = 9;
+}
+
+
+enum Post_User_Gender {
+  GENDER_UNSPECIFIED = 0;
+  GENDER_MALE = 1;
+  GENDER_FEMALE = 2;
 }
 
 enum PostVisibility {

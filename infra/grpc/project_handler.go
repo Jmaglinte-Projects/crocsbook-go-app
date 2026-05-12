@@ -7,6 +7,8 @@ import (
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
 	pb "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/lib"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/projectsvc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -22,7 +24,15 @@ func NewProjectHandler(svc projectsvc.Service) pb.ProjectServiceServer {
 }
 
 func (s *projectServer) ShowProjects(ctx context.Context, req *pb.ShowProjectsIn) (*pb.ShowProjectsOut, error) {
-	in := projectsvc.ShowProjectsIn{}
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		fmt.Println("CreateProject user ID not found")
+		return nil, status.Error(codes.Unauthenticated, "user ID not found")
+	}
+
+	in := projectsvc.ShowProjectsIn{
+		UserID: userID,
+	}
 
 	projects, err := s.svc.ShowProjects(ctx, &in)
 	if err != nil {
@@ -64,13 +74,17 @@ func (s *projectServer) ShowProject(ctx context.Context, req *pb.ShowProjectIn) 
 }
 
 func (s *projectServer) CreateProject(ctx context.Context, req *pb.CreateProjectIn) (*pb.CreateProjectOut, error) {
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		fmt.Println("CreateProject user ID not found")
+		return nil, status.Error(codes.Unauthenticated, "user ID not found")
+	}
+
 	startDate := req.StartDate.AsTime()
 	completionDate := req.CompletionDate.AsTime()
 
-	fmt.Println("ProjectUserId: ", req.ProjectUserId)
-
 	in := projectsvc.CreateProjectIn{
-		ProjectUserID:    project.UserID(req.ProjectUserId),
+		ProjectUserID:    project.UserID(userID),
 		Name:             req.Name,
 		Description:      &req.Description,
 		ThumbnailContent: req.ThumbnailContent,

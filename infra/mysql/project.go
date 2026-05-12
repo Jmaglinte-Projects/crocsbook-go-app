@@ -234,6 +234,10 @@ func (s *ProjectService) List(ctx context.Context, cond project.ListCond, option
 		))
 	}
 
+	if cond.ProjectUserID != nil {
+		pred = append(pred, table.Projects.ProjectUserID.EQ(jet.String(string(*cond.ProjectUserID))))
+	}
+
 	switch option.SortKey {
 	case projectsvc.ListOptionSortKey_CreatedAt_ASC:
 		orderBy = append(orderBy, table.Projects.CreatedTime.ASC())
@@ -294,6 +298,10 @@ func (s *ProjectService) Count(ctx context.Context, cond project.CountCond, opti
 		pred = append(pred, table.Projects.ProjectID.IN(
 			idExpressions...,
 		))
+	}
+
+	if cond.ProjectUserID != nil {
+		pred = append(pred, table.Projects.ProjectUserID.EQ(jet.String(string(*cond.ProjectUserID))))
 	}
 
 	if len(pred) > 0 {

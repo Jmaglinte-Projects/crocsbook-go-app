@@ -48,6 +48,8 @@ type ProjectLike struct {
 type ListCond struct {
 	ProjectID  *ProjectID
 	ProjectIDs []ProjectID
+
+	ProjectUserID *UserID
 }
 
 type CountCond ListCond

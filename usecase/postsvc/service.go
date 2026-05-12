@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/media"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/post"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/project"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/domain/user"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/mediasvc"
 	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/projectsvc"
+	"github.com/Jmaglinte-Projects/crocsbook-go-app/usecase/usersvc"
 	"github.com/gabriel-vasile/mimetype"
 )
 
@@ -116,9 +119,10 @@ type service struct {
 	mediaSvc         mediasvc.MediaService
 	projectSvc       projectsvc.ProjectService
 	projectR2Repo    projectsvc.ProjectR2Repository
+	userSvc          usersvc.UserService
 }
 
-func NewService(postRepo PostRepository, postSvc PostService, postReactionRepo PostReactionRepository, postReactionSvc PostReactionService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService, projectSvc projectsvc.ProjectService, projectR2Repo projectsvc.ProjectR2Repository) Service {
+func NewService(postRepo PostRepository, postSvc PostService, postReactionRepo PostReactionRepository, postReactionSvc PostReactionService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService, projectSvc projectsvc.ProjectService, projectR2Repo projectsvc.ProjectR2Repository, userSvc usersvc.UserService) Service {
 	return &service{
 		postRepo:         postRepo,
 		postSvc:          postSvc,
@@ -128,6 +132,7 @@ func NewService(postRepo PostRepository, postSvc PostService, postReactionRepo P
 		mediaSvc:         mediaSvc,
 		projectSvc:       projectSvc,
 		projectR2Repo:    projectR2Repo,
+		userSvc:          userSvc,
 	}
 }
 
@@ -149,6 +154,10 @@ func (s *service) ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut
 	}
 
 	if err := s.setPostStatsByProjectIds(ctx, entities...); err != nil {
+		return nil, err
+	}
+
+	if err := s.setUser(ctx, entities...); err != nil {
 		return nil, err
 	}
 
@@ -185,8 +194,12 @@ func (s *service) ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, e
 		return nil, err
 	}
 
-	b, _ := json.MarshalIndent(entity.Post, "", "  ")
-	fmt.Println("entity.Post:", string(b))
+	if err := s.setUser(ctx, entity); err != nil {
+		return nil, err
+	}
+
+	// b, _ := json.MarshalIndent(entity.Post, "", "  ")
+	// fmt.Println("entity.Post:", string(b))
 
 	return &ShowPostOut{
 		Item: entity,
@@ -450,19 +463,67 @@ func (s *service) setProject(ctx context.Context, entities ...*ViewPost) error {
 	}
 	for _, entity := range entities {
 		if p, ok := projectByID[project.ProjectID(entity.PostProjectID)]; ok {
-			presignedURL := ""
+			url := ""
 			if p.ThumbnailKey != nil {
-				if u, err := s.projectR2Repo.Find(ctx, *p.ThumbnailKey); err == nil {
-					presignedURL = u
-				}
+				url = fmt.Sprintf("%s/%s", os.Getenv("R2_PUBLIC_BASE_URL"), *p.ThumbnailKey)
 			}
 			entity.Project = &ViewProject{
 				Project:      p.Project,
-				ThumbnailURL: presignedURL,
+				ThumbnailURL: url,
 			}
 		}
 	}
 	return nil
+}
+
+func (s *service) setUser(ctx context.Context, entities ...*ViewPost) error {
+	unique := make(map[user.UserID]struct{}, len(entities))
+	for _, entity := range entities {
+		if entity.Project == nil {
+			continue
+		}
+		id := user.UserID(entity.Project.ProjectUserID)
+		unique[id] = struct{}{}
+	}
+	if len(unique) == 0 {
+		return nil
+	}
+	userIDs := make([]user.UserID, 0, len(unique))
+	for id := range unique {
+		userIDs = append(userIDs, id)
+	}
+
+	userCond := &user.ListCond{
+		UserIDs: userIDs,
+	}
+	userOpt := &usersvc.ListOption{}
+	users, err := s.userSvc.List(ctx, *userCond, *userOpt)
+	if err != nil {
+		fmt.Println("Error listing users")
+		return err
+	}
+
+	userByID := make(map[user.UserID]*usersvc.ViewUser)
+	for _, u := range users {
+		userByID[u.UserID] = u
+	}
+	for _, entity := range entities {
+		if entity.Project == nil {
+			continue
+		}
+		if u, ok := userByID[user.UserID(entity.Project.ProjectUserID)]; ok {
+			s.setProfileUrl(u)
+			entity.User = u
+		}
+	}
+	return nil
+}
+
+func (s *service) setProfileUrl(entity *usersvc.ViewUser) {
+	if entity.User.ProfileKey != nil {
+		url := fmt.Sprintf("%s/%s", os.Getenv("R2_PUBLIC_BASE_URL"), *entity.User.ProfileKey)
+		entity.User.ProfileURL = &url
+	}
 }
 
 func (s *service) setPostStatsByProjectIds(ctx context.Context, entities ...*ViewPost) error {
@@ -525,6 +586,7 @@ type ViewPost struct {
 	// linked other domain here whenever you need them
 	MediaList []*mediasvc.ViewMedia // it should be under postsvc not on mediasvc refactor this later
 	Project   *ViewProject
+	User      *usersvc.ViewUser
 
 	PostCount    uint64
 	LastPostTime time.Time
