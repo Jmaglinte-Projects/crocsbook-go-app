@@ -27,6 +27,8 @@ func UserIDFromContext(ctx context.Context) (user.UserID, bool) {
 func UnaryAuthInterceptor(jwtSecret string) grpc.UnaryServerInterceptor {
 	public := map[string]struct{}{
 		pb.AuthService_GoogleSignIn_FullMethodName: {},
+		pb.AuthService_RegisterUser_FullMethodName: {},
+		pb.AuthService_SignIn_FullMethodName:       {},
 	}
 
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {

@@ -7,6 +7,10 @@ option go_package = "github.com/Jmaglinte-Projects/crocsbook-go-app/infra/grpc/p
 service AuthService {
   // GoogleSignIn: frontend sends Google ID token (from GSI); backend verifies and returns app JWT.
   rpc GoogleSignIn (GoogleSignInIn) returns (GoogleSignInOut);
+  // RegisterUser creates a new user with email/password credentials and returns app JWT.
+  rpc RegisterUser (RegisterUserIn) returns (RegisterUserOut);
+  // SignIn verifies email/password credentials and returns app JWT.
+  rpc SignIn (SignInIn) returns (SignInOut);
 }
 
 message GoogleSignInIn {
@@ -14,5 +18,26 @@ message GoogleSignInIn {
 }
 
 message GoogleSignInOut {
+  string jwt_token = 1;
+}
+
+message RegisterUserIn {
+  string email = 1;
+  string gender = 2;
+  string nickname = 3;
+  string username = 4;
+  string password = 5;
+}
+
+message RegisterUserOut {
+  string jwt_token = 1;
+}
+
+message SignInIn {
+  string email = 1;
+  string password = 2;
+}
+
+message SignInOut {
   string jwt_token = 1;
 }
