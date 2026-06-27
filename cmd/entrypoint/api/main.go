@@ -65,6 +65,7 @@ func main() {
 		mediaRepo        mediasvc.MediaRepository
 		postRepo         postsvc.PostRepository
 		postReactionRepo postsvc.PostReactionRepository
+		postCommentRepo postsvc.PostCommentRepository
 		projectRepo      projectsvc.ProjectRepository
 		projectLikeRepo  projectsvc.ProjectLikeRepository
 		userRepo         usersvc.UserRepository
@@ -73,6 +74,7 @@ func main() {
 		mediaSvc        mediasvc.MediaService
 		postSvc         postsvc.PostService
 		postReactionSvc postsvc.PostReactionService
+		postCommentSvc  postsvc.PostCommentService
 		projectSvc      projectsvc.ProjectService
 		projectLikeSvc  projectsvc.ProjectLikeService
 		userSvc         usersvc.UserService
@@ -81,6 +83,7 @@ func main() {
 		mediaRepo = mysql.NewMediaRepository(db, mediaR2Repo)
 		postRepo = mysql.NewPostRepository(db)
 		postReactionRepo = mysql.NewPostReactionRepository(db)
+		postCommentRepo = mysql.NewPostCommentRepository(db)
 		projectRepo = mysql.NewProjectRepository(db)
 		projectLikeRepo = mysql.NewProjectLikeRepository(db)
 		userRepo = mysql.NewUserRepository(db)
@@ -88,6 +91,7 @@ func main() {
 		mediaSvc = mysql.NewMediaService(db, mediaR2Repo)
 		postSvc = mysql.NewPostService(db)
 		postReactionSvc = mysql.NewPostReactionService(db)
+		postCommentSvc = mysql.NewPostCommentService(db)
 		projectSvc = mysql.NewProjectService(db)
 		projectLikeSvc = mysql.NewProjectLikeService(db)
 		userSvc = mysql.NewUserService(db)
@@ -104,7 +108,7 @@ func main() {
 	)
 	{
 		mediaUcSvc = mediasvc.NewService(mediaRepo, mediaSvc)
-		postUcSvc = postsvc.NewService(postRepo, postSvc, postReactionRepo, postReactionSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo, userSvc)
+		postUcSvc = postsvc.NewService(postRepo, postSvc, postReactionRepo, postReactionSvc, postCommentRepo, postCommentSvc, mediaRepo, mediaSvc, projectSvc, projectR2Repo, userSvc)
 		projectUcSvc = projectsvc.NewService(projectRepo, projectSvc, projectR2Repo, projectLikeRepo, projectLikeSvc)
 		userUcSvc = usersvc.NewService(userRepo, userSvc, userR2Repo)
 

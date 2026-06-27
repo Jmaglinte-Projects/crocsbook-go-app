@@ -117,3 +117,42 @@ const (
 	PostReactionSortKey_CreatedTime_ASC PostReactionSortKey = iota
 	PostReactionSortKey_CreatedTime_DESC
 )
+
+type PostComment struct {
+	CommentID       PostCommentID
+	PostID          string
+	UserID          string
+	ParentCommentID *PostCommentID
+	Content         string
+	CreatedTime     time.Time
+	UpdatedTime     *time.Time
+}
+
+type PostCommentID string
+
+func NewPostCommentID() (PostCommentID, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return "", err
+	}
+	return PostCommentID(id.String()), nil
+}
+
+type ListPostCommentCond struct {
+	PostCommentID *PostCommentID
+	PostID        *PostID
+	UserID        *string
+
+	SortKey PostCommentSortKey
+	Size    int64
+	Offset  *int64
+}
+
+type CountPostCommentCond ListPostCommentCond
+
+type PostCommentSortKey uint
+
+const (
+	PostCommentSortKey_CreatedTime_ASC PostCommentSortKey = iota
+	PostCommentSortKey_CreatedTime_DESC
+)

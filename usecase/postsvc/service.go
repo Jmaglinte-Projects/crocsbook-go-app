@@ -30,6 +30,12 @@ type PostReactionRepository interface {
 	Remove(ctx context.Context, ids ...post.PostReactionID) error
 }
 
+type PostCommentRepository interface {
+	Find(ctx context.Context, id post.PostCommentID) (*post.PostComment, error)
+	Store(ctx context.Context, entity *post.PostComment) error
+	Remove(ctx context.Context, ids ...post.PostCommentID) error
+}
+
 type PostService interface {
 	List(ctx context.Context, cond post.ListCond) ([]*ViewPost, error)
 	Count(ctx context.Context, cond post.CountCond) (*uint64, error)
@@ -41,6 +47,11 @@ type PostReactionService interface {
 	Count(ctx context.Context, cond post.CountPostReactionsCond) (*uint64, error)
 }
 
+type PostCommentService interface {
+	List(ctx context.Context, cond post.ListPostCommentCond) ([]*post.PostComment, error)
+	Count(ctx context.Context, cond post.CountPostCommentCond) (*uint64, error)
+}
+
 type Service interface {
 	ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut, error)
 	ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, error)
@@ -49,6 +60,7 @@ type Service interface {
 	RemovePost(ctx context.Context, in *RemovePostIn) (*RemovePostOut, error)
 
 	ReactToPost(ctx context.Context, in *ReactToPostIn) (*ReactToPostOut, error)
+	CommentOnPost(ctx context.Context, in *CommentOnPostIn) (*CommentOnPostOut, error)
 
 	ShowPostByProjectId(ctx context.Context, in *ShowPostByProjectIdIn) (*ShowPostByProjectIdOut, error)
 }
@@ -110,11 +122,24 @@ type ReactToPostIn struct {
 
 type ReactToPostOut struct{}
 
+type CommentOnPostIn struct {
+	PostID          post.PostID
+	UserID          string
+	Content         string
+	ParentCommentID *post.PostCommentID
+}
+
+type CommentOnPostOut struct {
+	Item *ViewPostComment
+}
+
 type service struct {
 	postRepo         PostRepository
 	postSvc          PostService
 	postReactionRepo PostReactionRepository
 	postReactionSvc  PostReactionService
+	postCommentRepo  PostCommentRepository
+	postCommentSvc   PostCommentService
 	mediaRepo        mediasvc.MediaRepository
 	mediaSvc         mediasvc.MediaService
 	projectSvc       projectsvc.ProjectService
@@ -122,12 +147,14 @@ type service struct {
 	userSvc          usersvc.UserService
 }
 
-func NewService(postRepo PostRepository, postSvc PostService, postReactionRepo PostReactionRepository, postReactionSvc PostReactionService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService, projectSvc projectsvc.ProjectService, projectR2Repo projectsvc.ProjectR2Repository, userSvc usersvc.UserService) Service {
+func NewService(postRepo PostRepository, postSvc PostService, postReactionRepo PostReactionRepository, postReactionSvc PostReactionService, postCommentRepo PostCommentRepository, postCommentSvc PostCommentService, mediaRepo mediasvc.MediaRepository, mediaSvc mediasvc.MediaService, projectSvc projectsvc.ProjectService, projectR2Repo projectsvc.ProjectR2Repository, userSvc usersvc.UserService) Service {
 	return &service{
 		postRepo:         postRepo,
 		postSvc:          postSvc,
 		postReactionRepo: postReactionRepo,
 		postReactionSvc:  postReactionSvc,
+		postCommentRepo:  postCommentRepo,
+		postCommentSvc:   postCommentSvc,
 		mediaRepo:        mediaRepo,
 		mediaSvc:         mediaSvc,
 		projectSvc:       projectSvc,
@@ -158,6 +185,10 @@ func (s *service) ShowPosts(ctx context.Context, in *ShowPostsIn) (*ShowPostsOut
 	}
 
 	if err := s.setUser(ctx, entities...); err != nil {
+		return nil, err
+	}
+
+	if err := s.setPostComments(ctx, entities...); err != nil {
 		return nil, err
 	}
 
@@ -195,6 +226,10 @@ func (s *service) ShowPost(ctx context.Context, in *ShowPostIn) (*ShowPostOut, e
 	}
 
 	if err := s.setUser(ctx, entity); err != nil {
+		return nil, err
+	}
+
+	if err := s.setPostComments(ctx, entity); err != nil {
 		return nil, err
 	}
 
@@ -324,6 +359,60 @@ func (s *service) ReactToPost(ctx context.Context, in *ReactToPostIn) (*ReactToP
 	}
 
 	return &ReactToPostOut{}, nil
+}
+
+func (s *service) CommentOnPost(ctx context.Context, in *CommentOnPostIn) (*CommentOnPostOut, error) {
+	if in.Content == "" {
+		return nil, errors.New("comment content is required")
+	}
+
+	postEntity, err := s.postRepo.Find(ctx, in.PostID)
+	if err != nil {
+		return nil, err
+	}
+	if postEntity == nil {
+		return nil, errors.New("post not found")
+	}
+
+	if in.ParentCommentID != nil {
+		parent, err := s.postCommentRepo.Find(ctx, *in.ParentCommentID)
+		if err != nil {
+			return nil, err
+		}
+		if parent == nil {
+			return nil, errors.New("parent comment not found")
+		}
+		if parent.PostID != string(in.PostID) {
+			return nil, errors.New("parent comment does not belong to this post")
+		}
+	}
+
+	now := time.Now()
+
+	id, err := post.NewPostCommentID()
+	if err != nil {
+		return nil, err
+	}
+
+	entity := &post.PostComment{}
+	entity.CommentID = id
+	entity.PostID = string(in.PostID)
+	entity.UserID = in.UserID
+	entity.ParentCommentID = in.ParentCommentID
+	entity.Content = in.Content
+	entity.CreatedTime = now
+
+	err = s.postCommentRepo.Store(ctx, entity)
+	if err != nil {
+		return nil, err
+	}
+
+	view := &ViewPostComment{PostComment: *entity}
+	if err := s.setCommentUsers(ctx, view); err != nil {
+		return nil, err
+	}
+
+	return &CommentOnPostOut{Item: view}, nil
 }
 
 func (s *service) ShowPostByProjectId(ctx context.Context, in *ShowPostByProjectIdIn) (*ShowPostByProjectIdOut, error) {
@@ -559,6 +648,70 @@ func (s *service) setPostStatsByProjectIds(ctx context.Context, entities ...*Vie
 	return nil
 }
 
+func (s *service) setPostComments(ctx context.Context, entities ...*ViewPost) error {
+	for _, entity := range entities {
+		postID := entity.PostID
+		cond := post.ListPostCommentCond{
+			PostID:  &postID,
+			SortKey: post.PostCommentSortKey_CreatedTime_ASC,
+		}
+
+		comments, err := s.postCommentSvc.List(ctx, cond)
+		if err != nil {
+			return err
+		}
+
+		viewComments := make([]*ViewPostComment, 0, len(comments))
+		for _, c := range comments {
+			viewComments = append(viewComments, &ViewPostComment{PostComment: *c})
+		}
+
+		if err := s.setCommentUsers(ctx, viewComments...); err != nil {
+			return err
+		}
+
+		entity.CommentList = viewComments
+		entity.CommentCount = uint64(len(comments))
+	}
+	return nil
+}
+
+func (s *service) setCommentUsers(ctx context.Context, comments ...*ViewPostComment) error {
+	unique := make(map[user.UserID]struct{}, len(comments))
+	for _, c := range comments {
+		id := user.UserID(c.UserID)
+		unique[id] = struct{}{}
+	}
+	if len(unique) == 0 {
+		return nil
+	}
+
+	userIDs := make([]user.UserID, 0, len(unique))
+	for id := range unique {
+		userIDs = append(userIDs, id)
+	}
+
+	userCond := &user.ListCond{UserIDs: userIDs}
+	userOpt := &usersvc.ListOption{}
+	users, err := s.userSvc.List(ctx, *userCond, *userOpt)
+	if err != nil {
+		return err
+	}
+
+	userByID := make(map[user.UserID]*usersvc.ViewUser)
+	for _, u := range users {
+		userByID[u.UserID] = u
+	}
+
+	for _, c := range comments {
+		if u, ok := userByID[user.UserID(c.UserID)]; ok {
+			s.setProfileUrl(u)
+			c.User = u
+		}
+	}
+	return nil
+}
+
 type Filter struct {
 	CreatedTime *time.Time
 
@@ -590,6 +743,15 @@ type ViewPost struct {
 
 	PostCount    uint64
 	LastPostTime time.Time
+
+	CommentList  []*ViewPostComment
+	CommentCount uint64
+}
+
+type ViewPostComment struct {
+	post.PostComment
+
+	User *usersvc.ViewUser
 }
 
 type MediaImage struct {

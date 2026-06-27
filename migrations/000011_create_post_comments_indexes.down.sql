@@ -1,0 +1,1 @@
+DROP INDEX idx_post_comments_post_created ON post_comments;

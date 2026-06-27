@@ -684,3 +684,212 @@ func (src PostReactionsModels) Unmarshal() []*post.PostReactions {
 	}
 	return out
 }
+
+type postCommentRepository struct {
+	db *sql.DB
+}
+
+func NewPostCommentRepository(db *sql.DB) postsvc.PostCommentRepository {
+	return &postCommentRepository{
+		db: db,
+	}
+}
+
+func (r *postCommentRepository) Find(ctx context.Context, id post.PostCommentID) (*post.PostComment, error) {
+	stmt := table.PostComments.SELECT(table.PostComments.AllColumns).WHERE(
+		table.PostComments.CommentID.EQ(jet.String(string(id))))
+
+	dest := &PostCommentsModels{}
+	err := stmt.Query(r.db, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*dest) == 0 {
+		return nil, nil
+	}
+
+	out := dest.Unmarshal()
+
+	return out[0], nil
+}
+
+func (r *postCommentRepository) Store(ctx context.Context, entity *post.PostComment) error {
+	m := model.PostComments{}
+	m.CommentID = string(entity.CommentID)
+	m.PostID = entity.PostID
+	m.UserID = entity.UserID
+	if entity.ParentCommentID != nil {
+		parentCommentID := string(*entity.ParentCommentID)
+		m.ParentCommentID = &parentCommentID
+	}
+	m.Content = entity.Content
+	m.CreatedTime = entity.CreatedTime
+	m.UpdatedTime = entity.UpdatedTime
+
+	insertStmt := table.PostComments.INSERT(table.PostComments.AllColumns).MODEL(m)
+	updateStmt := table.PostComments.UPDATE(table.PostComments.AllColumns).MODEL(m)
+	updateStmt = updateStmt.WHERE(table.PostComments.CommentID.EQ(jet.String(string(entity.CommentID))))
+
+	_, err := insertStmt.Exec(r.db)
+	if err != nil {
+		if mysqlerr, ok := err.(*mysql.MySQLError); ok {
+			switch mysqlerr.Number {
+			case 1062:
+				result, err := updateStmt.Exec(r.db)
+				if err != nil {
+					return err
+				}
+				rowsAffected, err := result.RowsAffected()
+				if err != nil {
+					return err
+				}
+				if rowsAffected == 0 {
+					return fmt.Errorf("entity version conflicted")
+				}
+			default:
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *postCommentRepository) Remove(ctx context.Context, ids ...post.PostCommentID) error {
+	idExpressions := make([]jet.Expression, 0, len(ids))
+	for _, id := range ids {
+		idExpressions = append(idExpressions, jet.String(string(id)))
+	}
+
+	stmt := table.PostComments.DELETE().WHERE(table.PostComments.CommentID.IN(idExpressions...))
+	_, err := stmt.Exec(r.db)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type postCommentService struct {
+	db *sql.DB
+}
+
+func NewPostCommentService(db *sql.DB) postsvc.PostCommentService {
+	return &postCommentService{
+		db: db,
+	}
+}
+
+func (s *postCommentService) List(ctx context.Context, cond post.ListPostCommentCond) ([]*post.PostComment, error) {
+	stmt := table.PostComments.SELECT(table.PostComments.AllColumns)
+
+	pred := []jet.BoolExpression{}
+	orderBy := []jet.OrderByClause{}
+
+	if cond.PostCommentID != nil {
+		pred = append(pred, table.PostComments.CommentID.EQ(jet.String(string(*cond.PostCommentID))))
+	}
+
+	if cond.PostID != nil {
+		pred = append(pred, table.PostComments.PostID.EQ(jet.String(string(*cond.PostID))))
+	}
+
+	if cond.UserID != nil {
+		pred = append(pred, table.PostComments.UserID.EQ(jet.String(*cond.UserID)))
+	}
+
+	switch cond.SortKey {
+	case post.PostCommentSortKey_CreatedTime_ASC:
+		orderBy = append(orderBy, table.PostComments.CreatedTime.ASC())
+	case post.PostCommentSortKey_CreatedTime_DESC:
+		orderBy = append(orderBy, table.PostComments.CreatedTime.DESC())
+	default:
+		orderBy = append(orderBy, table.PostComments.CreatedTime.DESC())
+	}
+
+	if len(pred) > 0 {
+		stmt = stmt.WHERE(jet.AND(pred...))
+	}
+
+	stmt = stmt.ORDER_BY(orderBy...)
+
+	if cond.Offset != nil {
+		stmt = stmt.OFFSET(*cond.Offset)
+	}
+
+	if cond.Size > 0 {
+		stmt = stmt.LIMIT(cond.Size)
+	}
+
+	dest := &PostCommentsModels{}
+	err := stmt.Query(s.db, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*dest) == 0 {
+		return nil, nil
+	}
+
+	out := dest.Unmarshal()
+
+	return out, nil
+}
+
+func (s *postCommentService) Count(ctx context.Context, cond post.CountPostCommentCond) (*uint64, error) {
+	stmt := table.PostComments.SELECT(jet.COUNT(table.PostComments.CommentID).AS("count"))
+	pred := []jet.BoolExpression{}
+
+	if cond.PostCommentID != nil {
+		pred = append(pred, table.PostComments.CommentID.EQ(jet.String(string(*cond.PostCommentID))))
+	}
+
+	if cond.PostID != nil {
+		pred = append(pred, table.PostComments.PostID.EQ(jet.String(string(*cond.PostID))))
+	}
+
+	if cond.UserID != nil {
+		pred = append(pred, table.PostComments.UserID.EQ(jet.String(*cond.UserID)))
+	}
+
+	if len(pred) > 0 {
+		stmt = stmt.WHERE(jet.AND(pred...))
+	}
+
+	var dest []struct {
+		Count uint64
+	}
+
+	err := stmt.QueryContext(ctx, s.db, &dest)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dest[0].Count, nil
+}
+
+type PostCommentsModels []struct {
+	model.PostComments
+}
+
+func (src PostCommentsModels) Unmarshal() []*post.PostComment {
+	out := make([]*post.PostComment, 0, len(src))
+	for _, item := range src {
+		postCommentEntity := &post.PostComment{}
+		postCommentEntity.CommentID = post.PostCommentID(item.CommentID)
+		postCommentEntity.PostID = item.PostID
+		postCommentEntity.UserID = item.UserID
+		if item.ParentCommentID != nil {
+			parentCommentID := post.PostCommentID(*item.ParentCommentID)
+			postCommentEntity.ParentCommentID = &parentCommentID
+		}
+		postCommentEntity.Content = item.Content
+		postCommentEntity.CreatedTime = item.CreatedTime
+		postCommentEntity.UpdatedTime = item.UpdatedTime
+		out = append(out, postCommentEntity)
+	}
+	return out
+}

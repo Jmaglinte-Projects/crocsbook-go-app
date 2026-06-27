@@ -64,6 +64,19 @@ func main() {
 		if err != nil {
 			log.Fatalf("m.Down failed: %v", err)
 		}
+	case "force":
+		version := os.Args[2]
+
+		var v int
+		_, err := fmt.Sscanf(version, "%d", &v)
+		if err != nil {
+			log.Fatalf("invalid version: %v", err)
+		}
+
+		err = m.Force(v)
+		if err != nil {
+			log.Fatalf("m.Force failed: %v", err)
+		}
 	}
 
 	fmt.Println("\n--------------------------------")

@@ -145,6 +145,33 @@ func (s *postServer) ReactToPost(ctx context.Context, req *pb.ReactToPostIn) (*p
 	return &pb.ReactToPostOut{}, nil
 }
 
+func (s *postServer) CommentOnPost(ctx context.Context, req *pb.CommentOnPostIn) (*pb.CommentOnPostOut, error) {
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "user ID not found")
+	}
+
+	in := &postsvc.CommentOnPostIn{
+		PostID:  post.PostID(req.PostId),
+		UserID:  string(userID),
+		Content: req.Content,
+	}
+	if req.ParentCommentId != nil {
+		parentID := post.PostCommentID(*req.ParentCommentId)
+		in.ParentCommentID = &parentID
+	}
+
+	out, err := s.svc.CommentOnPost(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	item := &PostComment{}
+	item.UnmarshalOriginal(out.Item)
+
+	return &pb.CommentOnPostOut{Item: &item.Post_Comment}, nil
+}
+
 func (s *postServer) ShowPostByProjectId(ctx context.Context, req *pb.ShowPostByProjectIdIn) (*pb.ShowPostByProjectIdOut, error) {
 	filter := &PostFilter{}
 	filter.Marshal(req.Filter)
@@ -265,6 +292,61 @@ func (dest *Post) UnmarshalOriginal(src *postsvc.ViewPost) {
 			dest.User.UpdatedTime = timestamppb.New(*src.User.UpdatedTime)
 		}
 	}
+
+	if src.CommentList != nil {
+		dest.Comments = make([]*pb.Post_Comment, 0, len(src.CommentList))
+		for _, c := range src.CommentList {
+			comment := &PostComment{}
+			comment.UnmarshalOriginal(c)
+			dest.Comments = append(dest.Comments, &comment.Post_Comment)
+		}
+	}
+	dest.CommentCount = src.CommentCount
+}
+
+type PostComment struct {
+	pb.Post_Comment
+}
+
+func (dest *PostComment) UnmarshalOriginal(src *postsvc.ViewPostComment) {
+	dest.CommentId = string(src.CommentID)
+	dest.PostId = src.PostID
+	dest.UserId = src.UserID
+	if src.ParentCommentID != nil {
+		dest.ParentCommentId = ptr(string(*src.ParentCommentID))
+	}
+	dest.Content = src.Content
+	dest.CreatedTime = timestamppb.New(src.CreatedTime)
+	if src.UpdatedTime != nil {
+		dest.UpdatedTime = timestamppb.New(*src.UpdatedTime)
+	}
+
+	if src.User != nil {
+		dest.User = &pb.Post_User{}
+		dest.User.UserId = string(src.User.UserID)
+		dest.User.Email = src.User.Email
+		dest.User.Gender = post_userGenderToProto(src.User.Gender)
+
+		if src.User.ProfileURL != nil {
+			dest.User.ProfileUrl = *src.User.ProfileURL
+		}
+		if src.User.Nickname != nil {
+			dest.User.Nickname = *src.User.Nickname
+		}
+		if src.User.Username != nil {
+			dest.User.Username = *src.User.Username
+		}
+
+		dest.User.CreatedTime = timestamppb.New(src.User.CreatedTime)
+
+		if src.User.UpdatedTime != nil {
+			dest.User.UpdatedTime = timestamppb.New(*src.User.UpdatedTime)
+		}
+	}
+}
+
+func ptr(s string) *string {
+	return &s
 }
 
 func post_userGenderToProto(g user.Gender) pb.Post_User_Gender {

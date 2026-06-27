@@ -24,3 +24,7 @@ migration_up:
 # Example: make migration_down
 migration_down:
 	go run ./cmd/entrypoint/migration/main.go down
+
+# Example: make migration_down force=9
+migration_force:
+	go run ./cmd/entrypoint/migration/main.go force $(force)
