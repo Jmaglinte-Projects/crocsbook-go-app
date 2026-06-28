@@ -438,6 +438,18 @@ func (s *service) ShowPostByProjectId(ctx context.Context, in *ShowPostByProject
 		return nil, err
 	}
 
+	if err := s.setPostStatsByProjectIds(ctx, entities...); err != nil {
+		return nil, err
+	}
+
+	if err := s.setUser(ctx, entities...); err != nil {
+		return nil, err
+	}
+
+	if err := s.setPostComments(ctx, entities...); err != nil {
+		return nil, err
+	}
+
 	return &ShowPostByProjectIdOut{
 		Items: entities,
 		Total: uint64(len(entities)),

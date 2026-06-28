@@ -29,7 +29,7 @@ func main() {
 
 	fmt.Println("Starting migration...")
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DBNAME)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?multiStatements=true&parseTime=true", MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DBNAME)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("sql.Open failed: %v", err)
@@ -59,11 +59,18 @@ func main() {
 		if err != nil {
 			log.Fatalf("m.Up failed: %v", err)
 		}
+
+		fmt.Println("\n--------------------------------")
+		fmt.Println("Migration up completed successfully")
+		fmt.Println("\n--------------------------------")
 	case "down":
-		err = m.Down()
+		err = m.Steps(-1)
 		if err != nil {
 			log.Fatalf("m.Down failed: %v", err)
 		}
+		fmt.Println("\n--------------------------------")
+		fmt.Println("Migration down completed successfully")
+		fmt.Println("\n--------------------------------")
 	case "force":
 		version := os.Args[2]
 
@@ -77,11 +84,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("m.Force failed: %v", err)
 		}
+
+		fmt.Println("\n--------------------------------")
+		fmt.Println("Migration force completed successfully")
+		fmt.Println("\n--------------------------------")
 	}
 
-	fmt.Println("\n--------------------------------")
-	fmt.Println("Migration completed successfully")
-	fmt.Println("\n--------------------------------")
 }
 
 func loadEnv() error {

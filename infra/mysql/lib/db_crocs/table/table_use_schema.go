@@ -10,6 +10,10 @@ package table
 // UseSchema sets a new schema name for all generated table SQL builder types. It is recommended to invoke
 // this method only once at the beginning of the program.
 func UseSchema(schema string) {
+	ChatMessageAttachments = ChatMessageAttachments.FromSchema(schema)
+	ChatMessages = ChatMessages.FromSchema(schema)
+	ChatThreadParticipants = ChatThreadParticipants.FromSchema(schema)
+	ChatThreads = ChatThreads.FromSchema(schema)
 	Medias = Medias.FromSchema(schema)
 	PostComments = PostComments.FromSchema(schema)
 	PostReactions = PostReactions.FromSchema(schema)
